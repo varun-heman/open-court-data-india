@@ -55,8 +55,8 @@ pydantic>=1.10.7
 python-dotenv>=1.0.0
 
 # Documentation
-mkdocs>=1.5.0
-mkdocs-material>=9.4.0
-pymdown-extensions>=10.3
-mkdocstrings>=0.23.0
-mkdocstrings-python>=1.7.0
+mkdocs==1.6.1
+mkdocs-material==9.6.9
+mkdocstrings==0.29.0
+mkdocstrings-python==1.16.7
+pymdown-extensions==10.7.1
