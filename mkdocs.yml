@@ -6,7 +6,7 @@ repo_url: https://github.com/varun-heman/open-court-data-india
 repo_name: varun-heman/open-court-data-india
 
 # GitHub Pages deployment configuration
-use_directory_urls: true
+use_directory_urls: false
 
 theme:
   name: material
