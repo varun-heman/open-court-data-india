@@ -40,7 +40,10 @@ logs/
 .pytest_cache/
 
 # Downloaded data
+/data/
 data/
+/data
+data
 
 # Jupyter Notebook
 .ipynb_checkpoints
