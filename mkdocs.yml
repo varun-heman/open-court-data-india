@@ -1,6 +1,7 @@
 site_name: Open Court Data India
 site_description: Documentation for the Open Court Data India project
-site_author: Varun Heman
+site_author: Varun Hemachandran
+site_url: https://varun-heman.github.io/open-court-data-india/
 repo_url: https://github.com/varun-heman/open-court-data-india
 repo_name: varun-heman/open-court-data-india
 
@@ -73,6 +74,9 @@ plugins:
             show_source: true
             show_root_heading: true
             heading_level: 3
+
+# GitHub Pages deployment configuration
+use_directory_urls: true
 
 nav:
   - Home: index.md
