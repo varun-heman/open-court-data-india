@@ -19,7 +19,8 @@ from utils import (
     clean_filename,
     build_full_url,
     get_content_type,
-    parse_pdf_for_structured_data
+    parse_pdf_for_structured_data,
+    ensure_directory
 )
 
 
@@ -134,15 +135,13 @@ class DelhiHCScraper(BaseScraper):
         
         # Check file extension - only PDFs are likely to be cause lists
         _, ext = os.path.splitext(parsed_url.path)
-        if ext.lower() not in self.DOCUMENT_EXTENSIONS:
-            return False, 0.7, f"Not a document file type: {ext}"
+        if ext.lower() not in ['.pdf']:  # Restrict to only PDF files
+            return False, 0.7, f"Not a PDF file: {ext}"
         
         # If we know the content type, check it
         if content_type:
-            if 'text/html' in content_type:
-                return False, 0.8, "Content is HTML, not a document"
-            if 'application/pdf' not in content_type and 'application/msword' not in content_type:
-                return False, 0.6, f"Unexpected content type: {content_type}"
+            if 'application/pdf' not in content_type:
+                return False, 0.8, f"Not a PDF content type: {content_type}"
         
         # Check for date patterns in URL or title which often indicate cause lists
         date_pattern = r'\d{1,2}[-_.]\d{1,2}[-_.]\d{2,4}|\d{2,4}[-_.]\d{1,2}[-_.]\d{1,2}'
@@ -185,6 +184,12 @@ class DelhiHCScraper(BaseScraper):
             # Skip JavaScript links
             if href.startswith('javascript:') or href.startswith('javaScript:'):
                 self.logger.debug(f"Skipping JavaScript link: {href}")
+                continue
+            
+            # Skip non-PDF links
+            _, ext = os.path.splitext(href)
+            if ext.lower() != '.pdf':
+                self.logger.debug(f"Skipping non-PDF link: {href}")
                 continue
                 
             full_url = build_full_url(self.base_url, href)
@@ -237,18 +242,38 @@ class DelhiHCScraper(BaseScraper):
         self.logger.info("Starting Delhi High Court cause list scraper")
         
         try:
-            # Get cause list links
+            # Get all cause list links
+            self.logger.info(f"Fetching cause list links from {self.cause_list_url}")
             cause_list_links = self.get_cause_list_links()
+            
+            if not cause_list_links:
+                self.logger.warning(f"No cause list links found at {self.cause_list_url}")
+                return []
+            
+            self.logger.info(f"Found {len(cause_list_links)} cause list links")
             
             # Process each cause list link
             for link_info in cause_list_links:
-                pdf_url = link_info['url']
-                self.processed_urls.add(pdf_url)
-                self._process_pdf(pdf_url, link_info)
+                url = link_info['url']
+                
+                # Skip non-PDF files
+                if not url.lower().endswith('.pdf'):
+                    self.logger.debug(f"Skipping non-PDF file: {url}")
+                    continue
+                
+                # Process the PDF
+                self.logger.info(f"Processing PDF: {url}")
+                pdf_path = self._process_pdf(url, link_info)
+                
+                if pdf_path:
+                    self.logger.debug(f"Successfully processed PDF: {url}")
+                else:
+                    self.logger.warning(f"Failed to process PDF: {url}")
             
             # Save metadata
-            metadata_path = self.save_metadata(format="json")
-            self.logger.info(f"Saved metadata to: {metadata_path}")
+            if self.metadata:
+                metadata_path = self.save_metadata()
+                self.logger.info(f"Saved metadata to: {metadata_path}")
             
             return self.metadata
         
@@ -271,54 +296,52 @@ class DelhiHCScraper(BaseScraper):
         Returns:
             Path to the downloaded file or None if processing failed
         """
-        self.logger.info(f"Processing PDF: {pdf_url}")
+        # Mark URL as processed
+        self.processed_urls.add(pdf_url)
         
+        # Skip if not a PDF
+        if not pdf_url.lower().endswith('.pdf'):
+            self.logger.debug(f"Skipping non-PDF file: {pdf_url}")
+            return None
+            
         try:
             # Download the PDF
+            self.logger.info(f"Downloading file: {pdf_url}")
             pdf_path = self.download_file(pdf_url)
-            if not pdf_path:
-                self.logger.warning(f"Failed to download PDF: {pdf_url}")
-                return None
             
-            # Check if it's a cause list PDF
-            # Removed is_cause_list_pdf check as it is not available in the utils package
+            if not pdf_path:
+                self.logger.warning(f"Failed to download file: {pdf_url}")
+                return None
             
             # Extract date from PDF
             pdf_date = extract_date_from_pdf(pdf_path)
+            
+            # If a date was extracted, move the file to a date-based directory
             if pdf_date:
-                self.logger.info(f"PDF date: {pdf_date}")
+                date_str = pdf_date.strftime("%Y-%m-%d")
+                date_dir = ensure_directory(os.path.join(self.court_dir, date_str))
                 
-                # Create a directory for this date if it doesn't exist
-                date_dir = os.path.join(
-                    self.court_dir,
-                    pdf_date.strftime("%Y-%m-%d")
-                )
-                os.makedirs(date_dir, exist_ok=True)
-                
-                # Move the file to the date directory
+                # Get the filename
                 filename = os.path.basename(pdf_path)
+                
+                # New path in the date directory
                 new_path = os.path.join(date_dir, filename)
                 
-                if os.path.exists(new_path):
-                    self.logger.debug(f"File already exists at destination: {new_path}")
-                else:
-                    os.rename(pdf_path, new_path)
-                    self.logger.info(f"Moved file to: {new_path}")
-                
+                # Move the file
+                os.rename(pdf_path, new_path)
                 pdf_path = new_path
+                
+                self.logger.debug(f"Moved file to date directory: {pdf_path}")
             
             # Add metadata
             metadata = {
-                'url': pdf_url,
-                'filename': os.path.basename(pdf_path),
-                'path': pdf_path,
-                'date': pdf_date.strftime("%Y-%m-%d") if pdf_date else None,
-                'title': link_info.get('title') if link_info else os.path.basename(pdf_path),
-                'content_type': link_info.get('content_type') if link_info else None,
-                'is_cause_list': True,
-                'confidence': link_info.get('confidence') if link_info else 1.0,
-                'reason': link_info.get('reason') if link_info else "Direct download",
-                'download_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "url": pdf_url,
+                "file_path": pdf_path,
+                "court": "Delhi High Court",
+                "date": pdf_date.isoformat() if pdf_date else None,
+                "title": link_info.get("title") if link_info else os.path.basename(pdf_path),
+                "content_type": link_info.get("content_type") if link_info else "application/pdf",
+                "download_time": datetime.now().isoformat()
             }
             self.metadata.append(metadata)
             
@@ -330,17 +353,13 @@ class DelhiHCScraper(BaseScraper):
                         # Save structured data
                         json_path = os.path.splitext(pdf_path)[0] + ".json"
                         with open(json_path, "w") as f:
-                            import json
                             json.dump(structured_data, f, indent=2)
                         self.logger.info(f"Saved structured data to: {json_path}")
-                        
-                        # Add structured data to metadata
-                        metadata['structured_data_path'] = json_path
                 except Exception as e:
-                    self.logger.error(f"Error extracting structured data: {e}")
+                    self.logger.error(f"Error extracting structured data from PDF: {e}")
             
             return pdf_path
-        
+            
         except Exception as e:
             self.logger.error(f"Error processing PDF {pdf_url}: {e}")
             return None
