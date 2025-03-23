@@ -1,11 +1,8 @@
 site_name: Open Court Data India
-site_description: Documentation for the Open Court Data India project
-site_author: Varun Hemachandran
 site_url: https://varun-heman.github.io/open-court-data-india/
 repo_url: https://github.com/varun-heman/open-court-data-india
 repo_name: varun-heman/open-court-data-india
 
-# GitHub Pages deployment configuration
 use_directory_urls: false
 
 theme:
@@ -14,48 +11,17 @@ theme:
     scheme: slate
     primary: indigo
     accent: indigo
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-  icon:
-    repo: fontawesome/brands/github
 
 markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.tabbed:
-      alternate_style: true
   - tables
-  - footnotes
-  - attr_list
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: ["."]
-          options:
-            show_source: true
-            show_root_heading: true
-            heading_level: 3
 
-copyright: Copyright &copy; 2025 <a href="https://github.com/varun-heman">Varun Hemachandran</a>
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/varun-heman
-  generator: false
+copyright: Copyright &copy; 2025 Varun Hemachandran
 
 nav:
   - Home: index.md
