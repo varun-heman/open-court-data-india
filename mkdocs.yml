@@ -15,20 +15,32 @@ theme:
     primary: indigo
     accent: indigo
   features:
-    - navigation.instant
-    - navigation.tracking
     - navigation.tabs
     - navigation.sections
     - navigation.expand
-    - navigation.indexes
-    - navigation.top
-    - toc.follow
+    - navigation.path
+    - toc.integrate
     - search.suggest
     - search.highlight
     - content.tabs.link
+    - content.code.annotation
     - content.code.copy
   icon:
     repo: fontawesome/brands/github
+  favicon: assets/favicon.png
+  logo: assets/logo.png
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+static_templates:
+  - 404.html
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra_javascript:
+  - assets/javascripts/extra.js
 
 markdown_extensions:
   - admonition
