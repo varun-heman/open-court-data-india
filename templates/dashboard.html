@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Scrapers Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-ok {
+            background-color: #28a745;
+        }
+        .status-error {
+            background-color: #dc3545;
+        }
+        .status-running {
+            background-color: #007bff;
+        }
+        .status-warning {
+            background-color: #ffc107;
+        }
+        .status-unknown {
+            background-color: #6c757d;
+        }
+        .scraper-card {
+            margin-bottom: 1rem;
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .error-message {
+            max-width: 100%;
+            display: inline-block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-container {
+            max-height: 0;
+            overflow: hidden;
+            margin-top: 1rem;
+            padding: 0 1rem;
+            border-top: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            transition: all 0.35s ease;
+        }
+        .history-container.show {
+            max-height: 500px;
+            padding: 15px;
+        }
+        .history-toggle {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .history-toggle:hover {
+            text-decoration: underline;
+        }
+        .history-toggle i {
+            margin-right: 8px;
+            transition: transform 0.3s ease;
+        }
+        .history-day {
+            width: 20px;
+            height: 20px;
+            margin-right: 4px;
+            display: inline-block;
+            border-radius: 2px;
+        }
+        .uptime-100 {
+            background-color: #28a745;
+        }
+        .uptime-75 {
+            background-color: #5cb85c;
+        }
+        .uptime-50 {
+            background-color: #ffc107;
+        }
+        .uptime-25 {
+            background-color: #f0ad4e;
+        }
+        .uptime-0 {
+            background-color: #dc3545;
+        }
+        .toggle-icon {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+        .toggle-link {
+            color: #6c757d;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin: -0.5rem;
+        }
+        .toggle-link:hover {
+            color: #212529;
+        }
+        .card-header .bi-chevron-up {
+            transform: rotate(180deg);
+        }
+        
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        
+        .scraper-card {
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-ok {
+            background-color: #28a745;
+        }
+        
+        .status-error {
+            background-color: #dc3545;
+        }
+        
+        .status-running {
+            background-color: #007bff;
+        }
+        
+        .status-warning {
+            background-color: #ffc107;
+        }
+        
+        .status-unknown {
+            background-color: #6c757d;
+        }
+        
+        .history-day {
+            width: 16px;
+            height: 16px;
+            margin: 2px;
+            border-radius: 2px;
+        }
+        
+        .uptime-100 {
+            background-color: #28a745;
+        }
+        
+        .uptime-75 {
+            background-color: #8bc34a;
+        }
+        
+        .uptime-50 {
+            background-color: #ffc107;
+        }
+        
+        .uptime-25 {
+            background-color: #ff9800;
+        }
+        
+        .uptime-0 {
+            background-color: #dc3545;
+        }
+        
+        .error-message {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 400px;
+            display: inline-block;
+        }
+        
+        .history-section {
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .clickable-header {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .clickable-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .history-toggle[aria-expanded="false"] .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .history-toggle[aria-expanded="true"] .toggle-icon {
+            transform: rotate(0deg);
+        }
+        
+        .collapse {
+            transition: height 0.3s ease;
+        }
+        
+        .collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .collapse:not(.show) {
+            display: none;
+        }
+        
+        .collapsing {
+            height: 0;
+            overflow: hidden;
+            transition: height 0.35s ease;
+        }
+    </style>
+    <!-- Auto-refresh every 30 seconds -->
+    <meta http-equiv="refresh" content="30">
+</head>
+<body>
+    <div class="container py-4">
+        <header class="mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>Court Scrapers Dashboard</h1>
+                <div>
+                    <p class="text-muted mb-0">Last Updated: {{ current_time }} IST</p>
+                </div>
+            </div>
+            <p class="lead">Monitor the health and status of all court scrapers</p>
+        </header>
+
+        <div class="row">
+            <div class="col-12">
+                {% for scraper in scrapers %}
+                <div class="card scraper-card">
+                    <div class="card-header bg-light clickable-header" id="heading-{{ scraper.id }}" 
+                         data-bs-toggle="collapse" 
+                         data-bs-target="#collapse-{{ scraper.id }}" 
+                         aria-expanded="true" 
+                         aria-controls="collapse-{{ scraper.id }}"
+                         style="cursor: pointer;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <span class="status-indicator status-{{ scraper.status.status }}"></span>
+                                {% if scraper.id == 'delhi_hc' %}
+                                Delhi High Court
+                                {% else %}
+                                {{ scraper.name }}
+                                {% endif %}
+                                {% if scraper.status.status == 'ok' %}
+                                <span class="badge bg-success ms-2">OK</span>
+                                {% elif scraper.status.status == 'error' %}
+                                <span class="badge bg-danger ms-2">Error</span>
+                                {% elif scraper.status.status == 'running' %}
+                                <span class="badge bg-primary ms-2">Running</span>
+                                {% elif scraper.status.status == 'warning' %}
+                                <span class="badge bg-warning ms-2">Warning</span>
+                                {% else %}
+                                <span class="badge bg-secondary ms-2">Unknown</span>
+                                {% endif %}
+                            </h5>
+                            <div class="d-flex align-items-center">
+                                {% if scraper.specialized %}
+                                <div class="me-3">
+                                    <span class="text-muted small">Document Types:</span>
+                                    {% for specialized in scraper.specialized %}
+                                    <span class="badge {% if specialized.status.status == 'ok' %}bg-success{% elif specialized.status.status == 'error' %}bg-danger{% elif specialized.status.status == 'running' %}bg-primary{% elif specialized.status.status == 'warning' %}bg-warning{% else %}bg-secondary{% endif %} ms-1">{{ specialized.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <i class="bi bi-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="collapse-{{ scraper.id }}" class="collapse show" aria-labelledby="heading-{{ scraper.id }}">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Status:</strong> 
+                                        {% if scraper.status.status == 'ok' %}
+                                        <span class="text-success">OK</span>
+                                        {% elif scraper.status.status == 'error' %}
+                                        <span class="text-danger">Error</span>
+                                        {% elif scraper.status.status == 'running' %}
+                                        <span class="text-primary">Running</span>
+                                        {% elif scraper.status.status == 'warning' %}
+                                        <span class="text-warning">Warning</span>
+                                        {% else %}
+                                        <span class="text-secondary">Unknown</span>
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Last Check:</strong> {{ scraper.status.last_check|default('Never') }}</p>
+                                    <p><strong>Last Success:</strong> {{ scraper.status.last_success|default('Never') }}</p>
+                                    {% if scraper.status.status == 'error' %}
+                                    <p><strong>Error:</strong> <span class="text-danger error-message" title="{{ scraper.status.error }}">{{ scraper.status.error|default('Unknown error') }}</span></p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Recent Status:</h5>
+                                    <div class="d-flex align-items-center">
+                                        {% for day in scraper.daily_summary[:7] %}
+                                            {% set uptime_class = 'uptime-100' if day.uptime_percentage >= 95 else 'uptime-75' if day.uptime_percentage >= 75 else 'uptime-50' if day.uptime_percentage >= 50 else 'uptime-25' if day.uptime_percentage >= 25 else 'uptime-0' %}
+                                            <div class="history-day {{ uptime_class }}" title="{{ day.date }}: {{ day.uptime_percentage|round(1) }}% uptime"></div>
+                                        {% endfor %}
+                                        <span class="ms-2 text-muted small">
+                                            {% if scraper.daily_summary and scraper.daily_summary|length > 0 %}
+                                                {% if scraper.daily_summary[0].uptime_percentage >= 95 %}
+                                                    <span class="badge" style="background-color: #28a745">OK (95%+ uptime)</span>
+                                                {% elif scraper.daily_summary[0].uptime_percentage >= 75 %}
+                                                    <span class="badge" style="background-color: #8bc34a">OK (75%+ uptime)</span>
+                                                {% elif scraper.daily_summary[0].uptime_percentage >= 50 %}
+                                                    <span class="badge" style="background-color: #ffc107">Warning (50%+ uptime)</span>
+                                                {% elif scraper.daily_summary[0].uptime_percentage >= 25 %}
+                                                    <span class="badge" style="background-color: #ff9800">Warning (25%+ uptime)</span>
+                                                {% else %}
+                                                    <span class="badge" style="background-color: #dc3545">Error (< 25% uptime)</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">Unknown</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Horizontal divider before Document Scrapers -->
+                        <div class="card-body py-0">
+                            <div class="row my-4">
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 border-bottom"></div>
+                                        <h6 class="mx-3 my-0">Document Scrapers</h6>
+                                        <div class="flex-grow-1 border-bottom"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Specialized Scrapers -->
+                        {% if scraper.specialized %}
+                        <div class="card-body pt-0">
+                            <h6 class="mt-3 mb-3" style="display: none;">Document Scrapers</h6>
+                            <div class="row">
+                                {% for specialized in scraper.specialized %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">
+                                                {% if specialized.name == 'Cause Lists' %}
+                                                <i class="bi bi-list-check me-2"></i>
+                                                {% elif specialized.name == 'Judgments' %}
+                                                <i class="bi bi-file-text me-2"></i>
+                                                {% elif specialized.name == 'Orders' %}
+                                                <i class="bi bi-file-earmark-text me-2"></i>
+                                                {% elif specialized.name == 'Case Status' %}
+                                                <i class="bi bi-file-earmark-check me-2"></i>
+                                                {% else %}
+                                                <i class="bi bi-file-earmark me-2"></i>
+                                                {% endif %}
+                                                {{ specialized.name }}
+                                                {% if specialized.status.status == 'ok' %}
+                                                <span class="badge bg-success ms-2">OK</span>
+                                                {% elif specialized.status.status == 'error' %}
+                                                <span class="badge bg-danger ms-2">Error</span>
+                                                {% elif specialized.status.status == 'running' %}
+                                                <span class="badge bg-primary ms-2">Running</span>
+                                                {% elif specialized.status.status == 'warning' %}
+                                                <span class="badge bg-warning ms-2">Warning</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary ms-2">Unknown</span>
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <p><strong>Status:</strong> 
+                                                        {% if specialized.status.status == 'ok' %}
+                                                        <span class="text-success">OK</span>
+                                                        {% elif specialized.status.status == 'error' %}
+                                                        <span class="text-danger">Error</span>
+                                                        {% elif specialized.status.status == 'running' %}
+                                                        <span class="text-primary">Running</span>
+                                                        {% elif specialized.status.status == 'warning' %}
+                                                        <span class="text-warning">Warning</span>
+                                                        {% else %}
+                                                        <span class="text-secondary">Unknown</span>
+                                                        {% endif %}
+                                                    </p>
+                                                    <p><strong>Last Check:</strong> {{ specialized.status.last_check|default('Never') }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="d-flex flex-wrap align-items-center">
+                                                        {% for day in specialized.daily_summary[:7] %}
+                                                            {% set uptime_class = 'uptime-0' %}
+                                                            {% if day.uptime_percentage >= 99 %}
+                                                                {% set uptime_class = 'uptime-100' %}
+                                                            {% elif day.uptime_percentage >= 75 %}
+                                                                {% set uptime_class = 'uptime-75' %}
+                                                            {% elif day.uptime_percentage >= 50 %}
+                                                                {% set uptime_class = 'uptime-50' %}
+                                                            {% elif day.uptime_percentage >= 25 %}
+                                                                {% set uptime_class = 'uptime-25' %}
+                                                            {% endif %}
+                                                            <div class="history-day {{ uptime_class }}" title="{{ day.date }}: {{ day.uptime_percentage|round(1) }}% uptime"></div>
+                                                        {% endfor %}
+                                                        
+                                                        {% if specialized.daily_summary and specialized.daily_summary|length > 0 %}
+                                                            <span class="ms-2">
+                                                                {% if specialized.daily_summary[0].uptime_percentage >= 95 %}
+                                                                    <span class="badge" style="background-color: #28a745">OK (95%+ uptime)</span>
+                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 75 %}
+                                                                    <span class="badge" style="background-color: #8bc34a">OK (75%+ uptime)</span>
+                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 50 %}
+                                                                    <span class="badge" style="background-color: #ffc107">Warning (50%+ uptime)</span>
+                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 25 %}
+                                                                    <span class="badge" style="background-color: #ff9800">Warning (25%+ uptime)</span>
+                                                                {% else %}
+                                                                    <span class="badge" style="background-color: #dc3545">Error (< 25% uptime)</span>
+                                                                {% endif %}
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- History toggle moved here, below Document Scrapers section -->
+                        <div class="card-body pt-3 pb-3 border-top">
+                            <div class="row">
+                                <div class="col-12">
+                                    <p class="mb-0">
+                                        <a href="#" class="history-toggle d-flex align-items-center py-2 px-3 rounded" 
+                                           style="display: inline-block; background-color: #f8f9fa; text-decoration: none; color: #0d6efd;"
+                                           data-bs-toggle="collapse" 
+                                           data-bs-target="#history-{{ scraper.id }}"
+                                           aria-expanded="false"
+                                           aria-controls="history-{{ scraper.id }}">
+                                            <i class="bi bi-chevron-down toggle-icon me-2"></i><span> Show last 2 days history</span>
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="history-{{ scraper.id }}" class="collapse">
+                            <div class="card-body bg-light">
+                                <h6>Last 2 Days Status History</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Time</th>
+                                                <th>Scraper</th>
+                                                <th>Status</th>
+                                                <th>Uptime</th>
+                                                <th>Checks</th>
+                                                <th>Last Error</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if scraper.specialized %}
+                                                {% for specialized in scraper.specialized %}
+                                                    {% for day in specialized.daily_summary[:2] %}
+                                                    <tr>
+                                                        <td>{{ day.date }}</td>
+                                                        <td>{{ day.last_timestamp|default('N/A') }}</td>
+                                                        <td>{{ specialized.name }}</td>
+                                                        <td>
+                                                            {% if day.last_status == 'ok' %}
+                                                            <span class="badge bg-success">OK</span>
+                                                            {% elif day.last_status == 'error' %}
+                                                            <span class="badge bg-danger">Error</span>
+                                                            {% elif day.last_status == 'running' %}
+                                                            <span class="badge bg-primary">Running</span>
+                                                            {% elif day.last_status == 'warning' %}
+                                                            <span class="badge bg-warning">Warning</span>
+                                                            {% else %}
+                                                            <span class="badge bg-secondary">Unknown</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{{ day.uptime_percentage|round(1) }}%</td>
+                                                        <td>{{ day.total_count }}</td>
+                                                        <td>
+                                                            {% if day.last_error %}
+                                                            <span class="text-danger error-message" title="{{ day.last_error }}">{{ day.last_error }}</span>
+                                                            {% else %}
+                                                            <span class="text-muted">None</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No specialized scrapers available</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        Status Legend
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="history-day uptime-100 me-2"></div>
+                            <span>99-100% Uptime</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="history-day uptime-75 me-2"></div>
+                            <span>75-99% Uptime</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="history-day uptime-50 me-2"></div>
+                            <span>50-75% Uptime</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="history-day uptime-25 me-2"></div>
+                            <span>25-50% Uptime</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="history-day uptime-0 me-2"></div>
+                            <span>0-25% Uptime</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle toggle text changes based on collapse state
+            document.querySelectorAll('.history-toggle').forEach(function(toggle) {
+                const targetId = toggle.getAttribute('data-bs-target');
+                const textSpan = toggle.querySelector('span');
+                
+                // Set initial text based on expanded state
+                if (toggle.getAttribute('aria-expanded') === 'true') {
+                    textSpan.textContent = ' Hide history';
+                } else {
+                    textSpan.textContent = ' Show last 2 days history';
+                }
+                
+                // Update text when collapse state changes
+                document.querySelector(targetId).addEventListener('shown.bs.collapse', function() {
+                    textSpan.textContent = ' Hide history';
+                });
+                
+                document.querySelector(targetId).addEventListener('hidden.bs.collapse', function() {
+                    textSpan.textContent = ' Show last 2 days history';
+                });
+            });
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Truncate error messages
+            document.querySelectorAll('.error-message').forEach(function(element) {
+                const fullText = element.getAttribute('title');
+                if (fullText && fullText.length > 50) {
+                    element.textContent = fullText.substring(0, 50) + '...';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

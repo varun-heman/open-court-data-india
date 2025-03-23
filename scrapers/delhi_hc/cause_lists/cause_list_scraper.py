@@ -36,7 +36,13 @@ class DelhiHCCauseListScraper(DelhiHCScraper):
         # Update the court_dir to point to the cause_lists directory
         self.court_dir = self.cause_lists_dir
         
+        # Update today_dir to use the cause_lists directory instead of the original today_dir
+        today = datetime.now().strftime("%Y-%m-%d")
+        self.today_dir = os.path.join(self.court_dir, today)
+        os.makedirs(self.today_dir, exist_ok=True)
+        
         self.logger.info(f"Cause list output directory: {self.court_dir}")
+        self.logger.info(f"Today's cause list directory: {self.today_dir}")
     
     def run(self) -> List[Dict[str, Any]]:
         """
@@ -51,7 +57,8 @@ class DelhiHCCauseListScraper(DelhiHCScraper):
             # Get cause list links
             cause_list_links = self.get_cause_list_links()
             
-            # Process each cause list link
+            # Filter links to only include cause lists with high confidence
+            filtered_links = []
             for link_info in cause_list_links:
                 pdf_url = link_info['url']
                 
@@ -60,8 +67,13 @@ class DelhiHCCauseListScraper(DelhiHCScraper):
                     self.logger.debug(f"Skipping non-cause list or low confidence: {pdf_url}")
                     continue
                 
-                self.processed_urls.add(pdf_url)
-                self._process_pdf(pdf_url, link_info)
+                filtered_links.append(link_info)
+            
+            # Download PDFs in parallel
+            pdf_files = self._download_pdfs_parallel(filtered_links)
+            
+            # Process PDFs with Gemini in parallel
+            self._process_pdfs_parallel(pdf_files)
             
             # Save metadata
             metadata_path = self.save_metadata(format="json")

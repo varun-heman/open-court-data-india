@@ -29,6 +29,13 @@ download_pdf: true
 extract_text: true
 extract_metadata: true
 extract_structured_data: true
+use_gemini_api: true
+
+# Parallel processing settings
+parallel_downloads: true
+download_workers: 5
+parallel_processing: true
+processing_workers: 3
 
 # Courts specific settings
 courts:

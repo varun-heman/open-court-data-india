@@ -5,22 +5,23 @@ This module provides a scraper for Delhi High Court cause lists.
 """
 import os
 import re
-from datetime import datetime
+import json
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional, Set, Tuple
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 from utils import (
     BaseScraper,
-    extract_links_from_html,
-    extract_date_from_html,
-    extract_pdf_links_from_html,
-    extract_date_from_pdf,
+    extract_text_from_pdf,
     clean_filename,
     build_full_url,
     get_content_type,
-    parse_pdf_for_structured_data,
-    ensure_directory
+    ensure_directory,
+    parse_pdf_with_gemini,
+    save_markdown_output
 )
 
 
@@ -75,9 +76,11 @@ class DelhiHCScraper(BaseScraper):
         # Get base URL from config or use default
         super().__init__(
             court_name="Delhi High Court",
+            court_dir_name="delhi_hc",  # Override the default snake_case conversion
             base_url="https://delhihighcourt.nic.in",
             output_dir=output_dir,
-            config_file=config_file
+            config_file=config_file,
+            create_date_dir=False  # Don't create date directory by default
         )
         
         # Set the court directory to match the scraper folder structure
@@ -252,23 +255,11 @@ class DelhiHCScraper(BaseScraper):
             
             self.logger.info(f"Found {len(cause_list_links)} cause list links")
             
-            # Process each cause list link
-            for link_info in cause_list_links:
-                url = link_info['url']
-                
-                # Skip non-PDF files
-                if not url.lower().endswith('.pdf'):
-                    self.logger.debug(f"Skipping non-PDF file: {url}")
-                    continue
-                
-                # Process the PDF
-                self.logger.info(f"Processing PDF: {url}")
-                pdf_path = self._process_pdf(url, link_info)
-                
-                if pdf_path:
-                    self.logger.debug(f"Successfully processed PDF: {url}")
-                else:
-                    self.logger.warning(f"Failed to process PDF: {url}")
+            # Download PDFs in parallel
+            pdf_files = self._download_pdfs_parallel(cause_list_links)
+            
+            # Process PDFs with Gemini in parallel
+            self._process_pdfs_parallel(pdf_files)
             
             # Save metadata
             if self.metadata:
@@ -285,16 +276,170 @@ class DelhiHCScraper(BaseScraper):
             # Close the scraper
             self.close()
     
-    def _process_pdf(self, pdf_url: str, link_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def _download_pdfs_parallel(self, links: List[Dict[str, Any]]) -> List[str]:
         """
-        Process a PDF file from a URL.
+        Download PDFs in parallel.
+        
+        Args:
+            links: List of link information dictionaries
+            
+        Returns:
+            List of paths to downloaded PDF files
+        """
+        # Get configuration for parallel downloads
+        parallel_downloads = self.config.get("parallel_downloads", True)
+        max_workers = self.config.get("download_workers", 5)
+        
+        if not parallel_downloads:
+            # Fall back to sequential downloads
+            self.logger.info("Using sequential PDF downloads")
+            pdf_files = []
+            for link in links:
+                pdf_path = self._download_pdf(link["url"], link)
+                if pdf_path:
+                    pdf_files.append(pdf_path)
+            return pdf_files
+        
+        # Use parallel downloads
+        self.logger.info(f"Using parallel PDF downloads with {max_workers} workers")
+        pdf_files = []
+        
+        # Thread-safe lock for updating shared resources
+        metadata_lock = threading.Lock()
+        
+        def download_worker(link):
+            try:
+                url = link["url"]
+                # Skip if not a PDF
+                if not url.lower().endswith('.pdf'):
+                    self.logger.debug(f"Skipping non-PDF file: {url}")
+                    return None
+                
+                # Mark URL as processed
+                with metadata_lock:
+                    self.processed_urls.add(url)
+                
+                # Download the PDF
+                self.logger.info(f"Downloading file: {url}")
+                pdf_path = self.download_file(url)
+                
+                if not pdf_path:
+                    self.logger.warning(f"Failed to download file: {url}")
+                    return None
+                
+                # Add metadata
+                metadata = {
+                    "url": url,
+                    "file_path": pdf_path,
+                    "court": "Delhi High Court",
+                    "date": None,
+                    "title": link.get("title") if link else os.path.basename(pdf_path),
+                    "content_type": link.get("content_type") if link else "application/pdf",
+                    "download_time": datetime.now().isoformat()
+                }
+                
+                with metadata_lock:
+                    self.metadata.append(metadata)
+                
+                return pdf_path
+            except Exception as e:
+                self.logger.error(f"Error downloading PDF {link.get('url')}: {e}")
+                return None
+        
+        # Use ThreadPoolExecutor for parallel downloads
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_link = {executor.submit(download_worker, link): link for link in links}
+            
+            for future in as_completed(future_to_link):
+                pdf_path = future.result()
+                if pdf_path:
+                    pdf_files.append(pdf_path)
+        
+        self.logger.info(f"Downloaded {len(pdf_files)} PDF files")
+        return pdf_files
+    
+    def _process_pdfs_parallel(self, pdf_files: List[str]) -> None:
+        """
+        Process PDFs with Gemini API in parallel.
+        
+        Args:
+            pdf_files: List of paths to PDF files
+        """
+        # Check if Gemini API is enabled
+        if not self.config.get("use_gemini_api", True):
+            self.logger.info("Gemini API processing is disabled")
+            return
+        
+        # Get configuration for parallel processing
+        parallel_processing = self.config.get("parallel_processing", True)
+        max_workers = self.config.get("processing_workers", 3)
+        
+        if not parallel_processing:
+            # Fall back to sequential processing
+            self.logger.info("Using sequential Gemini API processing")
+            for pdf_path in pdf_files:
+                self._process_pdf_with_gemini(pdf_path)
+            return
+        
+        # Use parallel processing
+        self.logger.info(f"Using parallel Gemini API processing with {max_workers} workers")
+        
+        def process_worker(pdf_path):
+            try:
+                return self._process_pdf_with_gemini(pdf_path)
+            except Exception as e:
+                self.logger.error(f"Error processing PDF {pdf_path} with Gemini: {e}")
+                return None
+        
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_pdf = {executor.submit(process_worker, pdf_path): pdf_path for pdf_path in pdf_files}
+            
+            for future in as_completed(future_to_pdf):
+                pdf_path = future_to_pdf[future]
+                try:
+                    result = future.result()
+                    if result:
+                        self.logger.info(f"Successfully processed PDF: {pdf_path}")
+                except Exception as e:
+                    self.logger.error(f"Error processing PDF {pdf_path}: {e}")
+    
+    def _process_pdf_with_gemini(self, pdf_path: str) -> Optional[str]:
+        """
+        Process a PDF file with Gemini API.
+        
+        Args:
+            pdf_path: Path to the PDF file
+            
+        Returns:
+            Path to the markdown file or None if processing failed
+        """
+        try:
+            self.logger.info(f"Parsing PDF with Gemini API: {pdf_path}")
+            markdown_content = parse_pdf_with_gemini(pdf_path)
+            
+            if markdown_content:
+                markdown_path = save_markdown_output(pdf_path, markdown_content)
+                self.logger.info(f"Saved structured markdown to: {markdown_path}")
+                return markdown_path
+            else:
+                self.logger.warning(f"Failed to parse PDF with Gemini: {pdf_path}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error processing PDF with Gemini: {e}")
+            return None
+    
+    def _download_pdf(self, pdf_url: str, link_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Download a PDF file from a URL.
         
         Args:
             pdf_url: URL of the PDF file
             link_info: Additional information about the link
-        
+            
         Returns:
-            Path to the downloaded file or None if processing failed
+            Path to the downloaded file or None if download failed
         """
         # Mark URL as processed
         self.processed_urls.add(pdf_url)
@@ -313,55 +458,22 @@ class DelhiHCScraper(BaseScraper):
                 self.logger.warning(f"Failed to download file: {pdf_url}")
                 return None
             
-            # Extract date from PDF
-            pdf_date = extract_date_from_pdf(pdf_path)
-            
-            # If a date was extracted, move the file to a date-based directory
-            if pdf_date:
-                date_str = pdf_date.strftime("%Y-%m-%d")
-                date_dir = ensure_directory(os.path.join(self.court_dir, date_str))
-                
-                # Get the filename
-                filename = os.path.basename(pdf_path)
-                
-                # New path in the date directory
-                new_path = os.path.join(date_dir, filename)
-                
-                # Move the file
-                os.rename(pdf_path, new_path)
-                pdf_path = new_path
-                
-                self.logger.debug(f"Moved file to date directory: {pdf_path}")
-            
             # Add metadata
             metadata = {
                 "url": pdf_url,
                 "file_path": pdf_path,
                 "court": "Delhi High Court",
-                "date": pdf_date.isoformat() if pdf_date else None,
+                "date": None,
                 "title": link_info.get("title") if link_info else os.path.basename(pdf_path),
                 "content_type": link_info.get("content_type") if link_info else "application/pdf",
                 "download_time": datetime.now().isoformat()
             }
             self.metadata.append(metadata)
             
-            # Extract structured data if configured
-            if self.config.get("extract_structured_data", True):
-                try:
-                    structured_data = parse_pdf_for_structured_data(pdf_path)
-                    if structured_data:
-                        # Save structured data
-                        json_path = os.path.splitext(pdf_path)[0] + ".json"
-                        with open(json_path, "w") as f:
-                            json.dump(structured_data, f, indent=2)
-                        self.logger.info(f"Saved structured data to: {json_path}")
-                except Exception as e:
-                    self.logger.error(f"Error extracting structured data from PDF: {e}")
-            
             return pdf_path
             
         except Exception as e:
-            self.logger.error(f"Error processing PDF {pdf_url}: {e}")
+            self.logger.error(f"Error downloading PDF: {e}")
             return None
 
 

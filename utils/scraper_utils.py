@@ -16,12 +16,16 @@ import logging
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import sys
+import inspect
 
 from .config import ScraperConfig
 from .logger import setup_logger, get_logger_with_context
 from .cache import ScraperCache
 from .common import ensure_directory, clean_filename, get_today_formatted, build_full_url, get_file_hash
 
+# Add project root to path to import healthcheck
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Type variables for generic functions
 T = TypeVar('T')
@@ -69,7 +73,9 @@ class BaseScraper:
         court_name: str,
         base_url: str,
         output_dir: Optional[str] = None,
-        config_file: Optional[str] = None
+        config_file: Optional[str] = None,
+        court_dir_name: Optional[str] = None,
+        create_date_dir: bool = True
     ):
         """
         Initialize the base scraper.
@@ -79,6 +85,8 @@ class BaseScraper:
             base_url: Base URL for the court website
             output_dir: Directory for downloaded files
             config_file: Path to configuration file
+            court_dir_name: Optional name for the court directory (defaults to snake_case of court_name)
+            create_date_dir: Whether to create a date-based directory
         """
         self.court_name = court_name
         self.base_url = base_url
@@ -119,12 +127,17 @@ class BaseScraper:
             output_dir = self.config.get("output_dir", "data")
         self.output_dir = ensure_directory(output_dir)
         
-        # Create a directory for the court
-        self.court_dir = ensure_directory(os.path.join(self.output_dir, clean_filename(court_name)))
+        # Create a directory for the court using standardized naming (snake_case)
+        if court_dir_name is None:
+            court_dir_name = court_name.lower().replace(' ', '_')
+        self.court_dir = ensure_directory(os.path.join(self.output_dir, court_dir_name))
         
-        # Create a directory for today's date
-        today = get_today_formatted()
-        self.today_dir = ensure_directory(os.path.join(self.court_dir, today))
+        # Create a directory for today's date if requested
+        if create_date_dir:
+            today = get_today_formatted()
+            self.today_dir = ensure_directory(os.path.join(self.court_dir, today))
+        else:
+            self.today_dir = None
         
         # Set up session with retries
         self.session = self._create_session()
@@ -139,10 +152,14 @@ class BaseScraper:
         self.rate_limit_enabled = self.config.get("rate_limit_enabled", True)
         self.last_request_time = 0.0
         
+        # Update healthcheck status to running
+        self._update_healthcheck_status("running")
+        
         self.logger.info(f"Initialized {court_name} scraper")
         self.logger.info(f"Output directory: {self.output_dir}")
         self.logger.info(f"Court directory: {self.court_dir}")
-        self.logger.info(f"Today's directory: {self.today_dir}")
+        if self.today_dir:
+            self.logger.info(f"Today's directory: {self.today_dir}")
     
     def _create_session(self) -> requests.Session:
         """
@@ -486,19 +503,69 @@ class BaseScraper:
         """
         Close the scraper and clean up resources.
         """
-        self.logger.info("Closing scraper")
+        # Update healthcheck status to OK when closing successfully
+        self._update_healthcheck_status("ok")
         
-        # Close session
-        self.session.close()
-        
-        # Save metadata if any
-        if self.metadata:
-            try:
-                self.save_metadata()
-            except Exception as e:
-                self.logger.error(f"Error saving metadata: {e}")
-        
+        if self.session:
+            self.session.close()
         self.logger.info("Scraper closed")
+    
+    def _update_healthcheck_status(self, status: str, error: Optional[str] = None):
+        """
+        Update the healthcheck status for this scraper.
+        
+        Args:
+            status: Status to update (ok, error, running)
+            error: Optional error message
+        """
+        try:
+            # Dynamically import healthcheck to avoid circular imports
+            from healthcheck import update_scraper_status, get_scrapers
+            
+            # Get the scraper info
+            scrapers = get_scrapers()
+            scraper_info = None
+            
+            # Get the current module and class name to identify the scraper
+            module_name = self.__class__.__module__
+            class_name = self.__class__.__name__
+            
+            # Find the matching scraper info
+            for scraper in scrapers:
+                # Check if this is the base scraper
+                if scraper["type"] == "base" and module_name.endswith(os.path.basename(scraper["file"])[:-3]):
+                    scraper_info = scraper
+                    break
+                
+                # Check specialized scrapers
+                if "specialized" in scraper:
+                    for specialized in scraper["specialized"]:
+                        if specialized["type"] != "base" and module_name.endswith(os.path.basename(specialized["file"])[:-3]):
+                            scraper_info = specialized
+                            break
+                    
+                    if scraper_info:
+                        break
+            
+            # Update the status if we found the scraper info
+            if scraper_info:
+                update_scraper_status(scraper_info, status, error)
+                self.logger.info(f"Updated healthcheck status to {status}")
+            else:
+                self.logger.warning(f"Could not find scraper info for {module_name}.{class_name}")
+        except Exception as e:
+            self.logger.error(f"Error updating healthcheck status: {e}")
+    
+    def handle_exception(self, e: Exception) -> None:
+        """
+        Handle exceptions by updating the healthcheck status and logging the error.
+        
+        Args:
+            e: The exception that was raised
+        """
+        error_message = f"{type(e).__name__}: {str(e)}"
+        self.logger.error(f"Scraper error: {error_message}")
+        self._update_healthcheck_status("error", error_message)
 
 
 def get_content_type(url: str, session: Optional[requests.Session] = None) -> Optional[str]:

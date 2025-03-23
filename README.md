@@ -2,6 +2,10 @@
 
 A collection of scrapers and tools for accessing Indian court data.
 
+## Disclaimer
+
+**IMPORTANT NOTICE**: The author takes no responsibility for the quality and performance of this code. All data obtained through these scrapers is the respective copyright of its owner. The author claims ownership only of the code, not the data. Use at your own risk.
+
 ## Implementation Status
 
 The following table shows the implementation status of scrapers for various Indian courts:
@@ -39,7 +43,8 @@ open-court-data-india/
 │   ├── scraper_utils.py   # Base scraper and scraper utilities
 │   ├── config.py          # Configuration utilities
 │   ├── logger.py          # Logging utilities
-│   └── cache.py           # Caching utilities
+│   ├── cache.py           # Caching utilities
+│   └── gemini_utils.py    # Google Gemini API utilities
 ├── examples/              # Example scripts
 ├── tests/                 # Unit tests
 ├── config.yaml            # Configuration file
@@ -49,12 +54,76 @@ open-court-data-india/
 
 ## Features
 
-- Scrape cause lists, judgments, and other documents from Indian courts
-- Download and parse PDF documents
-- Extract structured data from court documents
-- Centralized utilities for common tasks
-- Configurable logging and caching
-- Rate limiting to avoid overloading court websites
+- **Standardized Data Structure**: All scraped data follows a consistent format for easy integration
+- **Metadata Extraction**: Automatically extracts metadata from court documents
+- **PDF Processing**: Downloads and processes PDF documents from court websites
+- **Structured Data Extraction**: Converts unstructured court data into structured formats using Google's Gemini API
+- **Configurable Behavior**: Customize scraper behavior through configuration files
+- **Parallel Processing**: Efficiently downloads and processes multiple documents concurrently
+  - Configurable number of worker threads for downloads and API processing
+  - Thread-safe operations to prevent race conditions
+  - Significant performance improvements for bulk operations
+- **Healthcheck Dashboard**: Monitor the status of all scrapers with a visual dashboard
+  - Real-time status indicators for each scraper
+  - Run scrapers directly from the dashboard
+  - API endpoints for integration with monitoring systems
+
+## Healthcheck Dashboard
+
+The project includes a healthcheck dashboard to monitor the status of all scrapers:
+
+```bash
+# Install dashboard dependencies
+pip install -r requirements-dashboard.txt
+
+# Run the dashboard
+python healthcheck.py
+```
+
+Then open your browser to http://localhost:5001 to access the dashboard.
+
+### Dashboard Features
+
+- **Visual Status Indicators**: Green/red indicators show the status of each scraper
+- **Detailed Status Information**: View last check time, last success time, and error messages
+- **Run Controls**: Run scrapers directly from the dashboard
+- **Integrated Status Logging**: Scrapers automatically log their status when they run
+- **Auto-refresh**: Dashboard automatically refreshes every 30 seconds
+
+### Healthcheck System
+
+The healthcheck system has been designed to be lightweight and integrated:
+
+- **No Scheduled Pings**: Unlike traditional monitoring systems, there are no automatic pings that could create unnecessary load
+- **Integrated Status Updates**: Scrapers automatically update their status at key points:
+  - When a scraper starts running (status: running)
+  - When a scraper completes successfully (status: ok)
+  - When a scraper encounters an error (status: error, with error details)
+- **Historical Data**: The system maintains a history of scraper runs, allowing you to track performance over time
+- **Uptime Calculation**: Automatically calculates uptime percentages based on successful runs
+
+### API Endpoints
+
+The healthcheck dashboard also provides API endpoints for integration with monitoring systems:
+
+- `GET /api/scrapers`: List all available scrapers
+- `GET /api/status`: Get status of all scrapers
+- `GET /api/status/<scraper_id>`: Get status of a specific scraper
+- `GET /api/check/<scraper_id>`: Check the health of a specific scraper
+- `GET /api/run/<scraper_id>`: Run a specific scraper
+
+Example:
+
+```bash
+# Get status of all scrapers
+curl http://localhost:5001/api/status
+
+# Check health of Delhi HC cause list scraper
+curl http://localhost:5001/api/check/delhi_hc_cause_lists
+
+# Run Delhi HC cause list scraper
+curl http://localhost:5001/api/run/delhi_hc_cause_lists
+```
 
 ## Installation
 
@@ -134,77 +203,41 @@ Available options:
 - `--debug`, `-d`: Enable debug logging
 - `--type`, `-t`: Specify which scraper to run (`all`, `base`, or `cause_list`)
 
-### Output Directory Structure
+### Directory Structure
 
 By default, the scrapers save data to the following directory structure:
 
 ```
 data/
 └── delhi_hc/                 # Delhi High Court data
-    ├── cause_lists/          # Cause lists
-    │   └── 2025-03-23/       # Organized by date
-    │       ├── file1.pdf     # PDF files
-    │       └── file1.json    # Structured data
-    └── judgments/            # Future: Judgments
+    └── cause_lists/          # Cause lists for Delhi HC
+        └── YYYY-MM-DD/       # Date-specific directory
+            ├── metadata.json # Metadata for all documents
+            ├── *.pdf         # Original PDF documents
+            └── *.md          # Structured markdown files
 ```
 
-The directory structure mirrors the scraper organization, making it easy to locate specific types of documents.
+Each specialized scraper (like cause lists, judgments, etc.) creates its own subdirectory under the court directory to maintain a clean organization of different document types.
 
-### Configuration
+### Configuration Options
 
-You can customize the scraper behavior by providing a configuration file:
-
-```python
-from scrapers import DelhiHCScraper
-
-# Initialize with custom configuration
-scraper = DelhiHCScraper(config_file="my_config.yaml")
-
-# Run the scraper
-scraper.run()
-```
-
-Example configuration file (YAML):
+The behavior of scrapers can be customized through the `config.yaml` file or by passing parameters directly to the scraper constructors:
 
 ```yaml
-# Global settings
+# Example configuration
 output_dir: "data"
-cache_dir: ".cache"
 log_level: "INFO"
-log_file: "scraper.log"
-log_to_console: true
-log_to_file: true
-
-# HTTP settings
-timeout: 30
-retries: 3
-retry_delay: 1
-max_retry_delay: 60
-backoff_factor: 2
-user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
-
-# Rate limiting
-rate_limit: 1  # requests per second
-rate_limit_enabled: true
-
-# Caching
 cache_enabled: true
-cache_expiry: 86400  # 24 hours
+cache_expiry: 86400  # 24 hours in seconds
 
-# Scraper behavior
-follow_redirects: true
-verify_ssl: true
-download_pdf: true
-extract_text: true
-extract_metadata: true
-extract_structured_data: true
+# Parallel processing options
+parallel_downloads: true
+download_workers: 5
+parallel_processing: true
+processing_workers: 3
 
-# Court-specific settings
-courts:
-  delhi_hc:
-    base_url: "https://delhihighcourt.nic.in"
-    cause_list_url: "https://delhihighcourt.nic.in/reports/cause_list/current"
-    rate_limit: 0.5  # More conservative rate limit for Delhi HC
+# API configuration
+gemini_api_key: "your-api-key"
 ```
 
 ## Utilities
