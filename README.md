@@ -1,6 +1,6 @@
-# Indian Courts Scrapers
+# Open Court Data India
 
-This repository contains scrapers for various Indian courts to extract cause lists, judgments, and other court documents.
+A collection of scrapers and tools for accessing Indian court data.
 
 ## Implementation Status
 
@@ -22,8 +22,8 @@ The following table shows the implementation status of scrapers for various Indi
 ## Project Structure
 
 ```
-ecourts-scrapers/
-├── data/                  # Directory for downloaded data
+open-court-data-india/
+├── data/                  # Directory for downloaded data (not tracked by Git)
 │   └── delhi_hc/          # Delhi High Court data
 │       └── cause_lists/   # Delhi HC cause lists
 ├── scrapers/              # Individual court scrapers
@@ -60,8 +60,8 @@ ecourts-scrapers/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/ecourts-scrapers.git
-   cd ecourts-scrapers
+   git clone https://github.com/varun-heman/open-court-data-india.git
+   cd open-court-data-india
    ```
 
 2. Create a virtual environment and install dependencies:
