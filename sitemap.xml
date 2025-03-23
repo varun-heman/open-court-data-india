@@ -1,75 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/index.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/about/changelog/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/about/changelog.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/about/license/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/about/license.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/database/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/database.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/scrapers/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/scrapers.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/utilities/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/api-reference/utilities.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/architecture/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/architecture.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/code-of-conduct/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/code-of-conduct.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/code-style/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/code-style.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/contributing/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/developer-guide/contributing.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/configuration/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/configuration.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/installation/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/installation.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/quick-start/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/getting-started/quick-start.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/api/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/api.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/database-integration/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/database-integration.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/overview/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/overview.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/scrapers/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/scrapers.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
     <url>
-         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/tagging-system/</loc>
+         <loc>https://varun-heman.github.io/open-court-data-india/user-guide/tagging-system.html</loc>
          <lastmod>2025-03-23</lastmod>
     </url>
 </urlset>
