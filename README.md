@@ -89,6 +89,10 @@ Then open your browser to http://localhost:5001 to access the dashboard.
 - **Run Controls**: Run scrapers directly from the dashboard
 - **Integrated Status Logging**: Scrapers automatically log their status when they run
 - **Auto-refresh**: Dashboard automatically refreshes every 30 seconds
+- **Uptime Tracking**: Visual representation of uptime history with accurate percentage calculations
+  - Shows 100% uptime when all runs are successful
+  - Excludes "running" status from uptime calculations
+  - Color-coded badges indicate health status (OK, Warning, Critical)
 
 ### Healthcheck System
 
@@ -101,6 +105,8 @@ The healthcheck system has been designed to be lightweight and integrated:
   - When a scraper encounters an error (status: error, with error details)
 - **Historical Data**: The system maintains a history of scraper runs, allowing you to track performance over time
 - **Uptime Calculation**: Automatically calculates uptime percentages based on successful runs
+  - Excludes "running" status from calculations
+  - Shows 100% when all completed runs are successful
 
 ### API Endpoints
 

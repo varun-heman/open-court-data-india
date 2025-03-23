@@ -9,8 +9,9 @@ import json
 import time
 import threading
 import subprocess
+import importlib
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 import inspect
 
 from flask import Flask, jsonify, render_template, request, redirect, url_for
@@ -48,17 +49,83 @@ scheduler_stop_event = threading.Event()
 
 def get_scrapers() -> List[Dict[str, Any]]:
     """
-    Get all available scrapers.
-    
-    Returns:
-        List[Dict[str, Any]]: List of scraper information.
+    Get a list of all available scrapers.
     """
     scrapers = []
     
-    # Get all Python files in the scrapers directory
+    # Define the scrapers directory
     scrapers_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scrapers")
     
-    # First, find all base scrapers
+    # If no scrapers are found, add default scrapers for Delhi HC
+    if not os.path.exists(scrapers_dir) or not os.listdir(scrapers_dir):
+        # Add default Delhi HC scrapers
+        default_scrapers = [
+            {
+                "id": "delhi_hc",
+                "name": "Delhi High Court",
+                "court": "delhi_hc",
+                "type": "base",
+                "file": "scrapers/delhi_hc/delhi_hc_scraper.py",
+                "specialized": [
+                    {
+                        "id": "delhi_hc_cause_lists",
+                        "name": "Delhi High Court Cause Lists",
+                        "court": "delhi_hc",
+                        "type": "cause_lists",
+                        "file": "scrapers/delhi_hc/cause_lists/cause_list_scraper.py"
+                    }
+                ]
+            }
+        ]
+        
+        # Get the status for each scraper
+        for scraper in default_scrapers:
+            # Get the scraper status
+            status_file = os.path.join(HEALTHCHECK_DIR, f"{scraper['id']}.json")
+            if os.path.exists(status_file):
+                with open(status_file, "r") as f:
+                    scraper["status"] = json.load(f)
+            else:
+                scraper["status"] = {
+                    "id": scraper['id'],
+                    "status": "unknown",
+                    "last_check": None,
+                    "last_success": None,
+                    "last_failure": None,
+                    "error": None,
+                    "history": []
+                }
+            
+            # Calculate daily summary
+            scraper["daily_summary"] = calculate_daily_summary(scraper["status"])
+            
+            # Get the status for each specialized scraper
+            for specialized in scraper["specialized"]:
+                # Get the specialized scraper status
+                specialized_status_file = os.path.join(HEALTHCHECK_DIR, f"{specialized['id']}.json")
+                if os.path.exists(specialized_status_file):
+                    with open(specialized_status_file, "r") as f:
+                        specialized["status"] = json.load(f)
+                else:
+                    specialized["status"] = {
+                        "id": specialized['id'],
+                        "status": "unknown",
+                        "last_check": None,
+                        "last_success": None,
+                        "last_failure": None,
+                        "error": None,
+                        "history": []
+                    }
+                
+                # Calculate daily summary
+                specialized["daily_summary"] = calculate_daily_summary(specialized["status"])
+            
+            # Add the scraper to the list
+            scrapers.append(scraper)
+        
+        return scrapers
+    
+    # Find all base scrapers
     for root, _, files in os.walk(scrapers_dir):
         for file in files:
             if file.endswith("_scraper.py") and not file.startswith("__") and "cause_lists" not in root:
@@ -454,64 +521,107 @@ def run_scraper(scraper_info: Dict[str, Any]) -> None:
 
 @app.route("/")
 def index():
-    """Render the dashboard."""
-    # Get all scrapers
+    """
+    Render the dashboard.
+    """
     scrapers = get_scrapers()
-    
-    # Get last run times
-    last_run_times = {}
-    if os.path.exists(LAST_RUN_FILE):
-        with open(LAST_RUN_FILE, "r") as f:
-            last_run_times = json.load(f)
     
     # Get status for each scraper
     for scraper in scrapers:
         # Get status
-        scraper["status"] = get_scraper_status(scraper["id"])
+        status_file = os.path.join(HEALTHCHECK_DIR, f"{scraper['id']}.json")
+        if os.path.exists(status_file):
+            with open(status_file, "r") as f:
+                try:
+                    scraper["status"] = json.load(f)
+                except json.JSONDecodeError:
+                    scraper["status"] = {"status": "unknown", "error": "Invalid status file"}
+        else:
+            scraper["status"] = {"status": "unknown", "error": "No status file"}
         
-        # Add running status
-        with lock:
-            if scraper["id"] in running_scrapers and running_scrapers[scraper["id"]].poll() is None:
-                scraper["status"]["status"] = "running"
-        
-        # Add last run time
-        if scraper["id"] in last_run_times:
-            scraper["status"]["last_run"] = last_run_times[scraper["id"]].isoformat()
-        
-        # Process history into daily summary
+        # Process history into daily summary for uptime calculation
         scraper["daily_summary"] = calculate_daily_summary(scraper["status"])
         
         # Get status for specialized scrapers
         if "specialized" in scraper:
             for specialized in scraper["specialized"]:
-                try:
-                    # Get status
-                    specialized["status"] = get_scraper_status(specialized["id"])
-                    
-                    # Add running status
-                    with lock:
-                        if specialized["id"] in running_scrapers and running_scrapers[specialized["id"]].poll() is None:
-                            specialized["status"]["status"] = "running"
-                    
-                    # Add last run time
-                    if specialized["id"] in last_run_times:
-                        specialized["status"]["last_run"] = last_run_times[specialized["id"]].isoformat()
-                    
-                    # Process history into daily summary
-                    specialized["daily_summary"] = calculate_daily_summary(specialized["status"])
-                except Exception as e:
-                    specialized["status"] = {"status": "unknown", "error": str(e)}
+                # Get status
+                status_file = os.path.join(HEALTHCHECK_DIR, f"{specialized['id']}.json")
+                if os.path.exists(status_file):
+                    with open(status_file, "r") as f:
+                        try:
+                            specialized["status"] = json.load(f)
+                        except json.JSONDecodeError:
+                            specialized["status"] = {"status": "unknown", "error": "Invalid status file"}
+                else:
+                    specialized["status"] = {"status": "unknown", "error": "No status file"}
+                
+                # Process history into daily summary for uptime calculation
+                specialized["daily_summary"] = calculate_daily_summary(specialized["status"])
     
-    # Pass the current time to the template in 24-hour IST format
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # Get the current time
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
     
-    return render_template("dashboard.html", scrapers=scrapers, current_time=current_time)
+    # Render the template
+    return render_template('dashboard.html', scrapers=scrapers, current_time=current_time)
 
-@app.route("/api/scrapers")
+@app.route('/api/scrapers')
 def api_scrapers():
-    """API endpoint to list all scrapers."""
+    """Get all scrapers."""
     scrapers = get_scrapers()
     return jsonify(scrapers)
+
+@app.route('/api/scraper/<scraper_id>')
+def api_scraper(scraper_id):
+    """Get a scraper by ID."""
+    scrapers = get_scrapers()
+    for scraper in scrapers:
+        if scraper["id"] == scraper_id:
+            return jsonify(scraper)
+        for specialized in scraper.get("specialized", []):
+            if specialized["id"] == scraper_id:
+                return jsonify(specialized)
+    return jsonify({"error": "Scraper not found"}), 404
+
+@app.route('/api/scraper/<scraper_id>/history')
+def api_scraper_history(scraper_id):
+    """Get the history for a scraper."""
+    try:
+        # Get the status file
+        status_file = os.path.join(HEALTHCHECK_DIR, f"{scraper_id}.json")
+        if not os.path.exists(status_file):
+            return jsonify({"error": "Scraper not found"}), 404
+        
+        # Read the status file
+        with open(status_file, "r") as f:
+            status = json.load(f)
+        
+        # Get the history
+        history = status.get("history", [])
+        
+        # Format each history entry
+        formatted_history = []
+        for entry in history:
+            timestamp = entry.get("timestamp", "")
+            date_str = timestamp.split("T")[0] if timestamp and "T" in timestamp else ""
+            time_str = ""
+            if timestamp and "T" in timestamp:
+                time_part = timestamp.split("T")[1]
+                if "." in time_part:
+                    time_part = time_part.split(".")[0]  # Remove milliseconds
+                time_str = f"{time_part} IST"
+            
+            formatted_entry = {
+                "date": date_str,
+                "time": time_str,
+                "status": entry.get("status", ""),
+                "error": entry.get("error", None)
+            }
+            formatted_history.append(formatted_entry)
+        
+        return jsonify(formatted_history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/status")
 def api_status():
@@ -639,84 +749,23 @@ def get_scraper_history(scraper_id):
             timestamp = entry.get("timestamp", "")
             date_str = timestamp.split("T")[0] if timestamp else ""
             
-            # Format time in 24-hour IST format
-            time_str = ""
-            if timestamp and "T" in timestamp:
-                time_part = timestamp.split("T")[1]
-                if "." in time_part:
-                    time_part = time_part.split(".")[0]  # Remove milliseconds
-                # Format as HH:MM:SS IST
-                time_str = f"{time_part} IST"
-            
-            if not date_str:
-                continue
+            # Only include entries from the last 2 days
+            if date_str and (date_str == datetime.now().strftime("%Y-%m-%d") or date_str == (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")):
+                # Format time in 24-hour IST format
+                time_str = ""
+                if timestamp and "T" in timestamp:
+                    time_part = timestamp.split("T")[1]
+                    if "." in time_part:
+                        time_part = time_part.split(".")[0]  # Remove milliseconds
+                    time_str = f"{time_part} IST"
                 
-            if date_str not in daily_summary:
-                daily_summary[date_str] = {
+                # Add to all entries
+                all_entries.append({
                     "date": date_str,
-                    "statuses": [],
-                    "errors": [],
-                    "total_count": 0,
-                    "ok_count": 0,
-                    "uptime_percentage": 0,
-                    "last_status": None,
-                    "last_error": None,
-                    "last_timestamp": None
-                }
-            
-            status = entry.get("status")
-            error = entry.get("error")
-            
-            daily_summary[date_str]["statuses"].append(status)
-            daily_summary[date_str]["total_count"] += 1
-            
-            if status == "ok":
-                daily_summary[date_str]["ok_count"] += 1
-            elif status == "error" and error:
-                daily_summary[date_str]["errors"].append(error)
-            
-            # Update last status, error, and timestamp
-            daily_summary[date_str]["last_status"] = status
-            if status == "error" and error:
-                daily_summary[date_str]["last_error"] = error
-            daily_summary[date_str]["last_timestamp"] = time_str
-        
-        # Calculate uptime percentage for each day
-        for date_str, day_data in daily_summary.items():
-            if day_data["total_count"] > 0:
-                day_data["uptime_percentage"] = (day_data["ok_count"] / day_data["total_count"]) * 100
-        
-        # Convert to list and sort by date (newest first)
-        daily_summary_list = list(daily_summary.values())
-        daily_summary_list.sort(key=lambda x: x["date"], reverse=True)
-        
-        return jsonify({
-            "scraper_id": scraper_id,
-            "daily_summary": daily_summary
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-def calculate_daily_summary(status: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Process scraper history into daily summary.
-    """
-    try:
-        # Process history into daily summary
-        daily_summary = {}
-        
-        for entry in status.get("history", []):
-            timestamp = entry.get("timestamp", "")
-            date_str = timestamp.split("T")[0] if timestamp else ""
-            
-            # Format time in 24-hour IST format
-            time_str = ""
-            if timestamp and "T" in timestamp:
-                time_part = timestamp.split("T")[1]
-                if "." in time_part:
-                    time_part = time_part.split(".")[0]  # Remove milliseconds
-                # Format as HH:MM:SS IST
-                time_str = f"{time_part} IST"
+                    "time": time_str,
+                    "status": entry.get("status", ""),
+                    "error": entry.get("error", None)
+                })
             
             if not date_str:
                 continue
@@ -760,9 +809,157 @@ def calculate_daily_summary(status: Dict[str, Any]) -> List[Dict[str, Any]]:
         daily_summary_list = list(daily_summary.values())
         daily_summary_list.sort(key=lambda x: x["date"], reverse=True)
         
+        return jsonify({
+            "scraper_id": scraper_id,
+            "daily_summary": daily_summary
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def calculate_daily_summary(status: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Process scraper history into daily summary.
+    """
+    try:
+        # Process history into daily summary
+        daily_summary = {}
+        
+        # First, check if there's a current "running" status
+        current_status = status.get("status")
+        current_timestamp = status.get("last_check")
+        
+        # Track all history entries for the last 2 days
+        all_entries = []
+        today = datetime.now().strftime("%Y-%m-%d")
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        # Keep track of errors for uptime calculation
+        has_errors = False
+        
+        # Process history into daily summary
+        for entry in status.get("history", []):
+            timestamp = entry.get("timestamp", "")
+            date_str = timestamp.split("T")[0] if timestamp else ""
+            
+            # Only include entries from the last 2 days
+            if date_str and (date_str == today or date_str == yesterday):
+                # Format time in 24-hour IST format
+                time_str = ""
+                if timestamp and "T" in timestamp:
+                    time_part = timestamp.split("T")[1]
+                    if "." in time_part:
+                        time_part = time_part.split(".")[0]  # Remove milliseconds
+                    time_str = f"{time_part} IST"
+                
+                # Only add completed entries (not "running") to history
+                if entry.get("status") != "running":
+                    all_entries.append({
+                        "date": date_str,
+                        "time": time_str,
+                        "status": entry.get("status", ""),
+                        "error": entry.get("error", None)
+                    })
+                    
+                    # Track if there are any errors
+                    if entry.get("status") == "error":
+                        has_errors = True
+            
+            if not date_str:
+                continue
+                
+            if date_str not in daily_summary:
+                daily_summary[date_str] = {
+                    "date": date_str,
+                    "statuses": [],
+                    "errors": [],
+                    "total_count": 0,
+                    "ok_count": 0,
+                    "uptime_percentage": 0,
+                    "last_status": None,
+                    "last_error": None,
+                    "last_timestamp": None
+                }
+            
+            status_val = entry.get("status")
+            error = entry.get("error")
+            
+            # Don't count "running" status in uptime calculations
+            if status_val != "running":
+                daily_summary[date_str]["statuses"].append(status_val)
+                daily_summary[date_str]["total_count"] += 1
+                
+                if status_val == "ok":
+                    daily_summary[date_str]["ok_count"] += 1
+                elif status_val == "error" and error:
+                    daily_summary[date_str]["errors"].append(error)
+            
+            # Update last status, error, and timestamp
+            daily_summary[date_str]["last_status"] = status_val
+            if status_val == "error" and error:
+                daily_summary[date_str]["last_error"] = error
+            daily_summary[date_str]["last_timestamp"] = time_str
+        
+        # Add current running status to today's summary if it exists
+        if current_status == "running" and current_timestamp:
+            today_str = current_timestamp.split("T")[0] if "T" in current_timestamp else datetime.now().strftime("%Y-%m-%d")
+            
+            # Format time in 24-hour IST format
+            time_str = ""
+            if current_timestamp and "T" in current_timestamp:
+                time_part = current_timestamp.split("T")[1]
+                if "." in time_part:
+                    time_part = time_part.split(".")[0]  # Remove milliseconds
+                time_str = f"{time_part} IST"
+            
+            # Add current running entry to all entries
+            all_entries.append({
+                "date": today_str,
+                "time": time_str,
+                "status": "running",
+                "error": None
+            })
+            
+            if today_str not in daily_summary:
+                daily_summary[today_str] = {
+                    "date": today_str,
+                    "statuses": [],
+                    "errors": [],
+                    "total_count": 0,
+                    "ok_count": 0,
+                    "uptime_percentage": 0,
+                    "last_status": "running",
+                    "last_error": None,
+                    "last_timestamp": time_str
+                }
+            else:
+                # Update with running status
+                daily_summary[today_str]["last_status"] = "running"
+                daily_summary[today_str]["last_timestamp"] = time_str
+        
+        # Calculate uptime percentage for each day
+        for date_str, day_data in daily_summary.items():
+            if day_data["total_count"] > 0:
+                day_data["uptime_percentage"] = (day_data["ok_count"] / day_data["total_count"]) * 100
+                
+                # If all runs are successful, ensure it shows 100%
+                if day_data["ok_count"] == day_data["total_count"]:
+                    day_data["uptime_percentage"] = 100.0
+        
+        # Convert to list and sort by date (newest first)
+        daily_summary_list = list(daily_summary.values())
+        daily_summary_list.sort(key=lambda x: x["date"], reverse=True)
+        
+        # Add all entries to the first day summary
+        if daily_summary_list:
+            daily_summary_list[0]["all_entries"] = sorted(all_entries, key=lambda x: x["date"] + x["time"], reverse=True)
+            
+            # If there are no errors in any entries, set uptime to 100%
+            if not has_errors and daily_summary_list[0]["total_count"] > 0:
+                daily_summary_list[0]["uptime_percentage"] = 100.0
+        
         return daily_summary_list
     except Exception as e:
-        print(f"Error processing daily summary: {e}")
+        print(f"Error calculating daily summary: {e}")
         return []
 
 if __name__ == "__main__":

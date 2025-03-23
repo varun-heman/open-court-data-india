@@ -316,29 +316,28 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <h5>Recent Status:</h5>
+                                    <h3 class="mb-0">Recent Status:</h3>
                                     <div class="d-flex align-items-center">
                                         {% for day in scraper.daily_summary[:7] %}
                                             {% set uptime_class = 'uptime-100' if day.uptime_percentage >= 95 else 'uptime-75' if day.uptime_percentage >= 75 else 'uptime-50' if day.uptime_percentage >= 50 else 'uptime-25' if day.uptime_percentage >= 25 else 'uptime-0' %}
                                             <div class="history-day {{ uptime_class }}" title="{{ day.date }}: {{ day.uptime_percentage|round(1) }}% uptime"></div>
                                         {% endfor %}
-                                        <span class="ms-2 text-muted small">
-                                            {% if scraper.daily_summary and scraper.daily_summary|length > 0 %}
-                                                {% if scraper.daily_summary[0].uptime_percentage >= 95 %}
-                                                    <span class="badge" style="background-color: #28a745">OK (95%+ uptime)</span>
-                                                {% elif scraper.daily_summary[0].uptime_percentage >= 75 %}
-                                                    <span class="badge" style="background-color: #8bc34a">OK (75%+ uptime)</span>
-                                                {% elif scraper.daily_summary[0].uptime_percentage >= 50 %}
-                                                    <span class="badge" style="background-color: #ffc107">Warning (50%+ uptime)</span>
-                                                {% elif scraper.daily_summary[0].uptime_percentage >= 25 %}
-                                                    <span class="badge" style="background-color: #ff9800">Warning (25%+ uptime)</span>
-                                                {% else %}
-                                                    <span class="badge" style="background-color: #dc3545">Error (< 25% uptime)</span>
-                                                {% endif %}
+                                        
+                                        {% if scraper.daily_summary and scraper.daily_summary|length > 0 %}
+                                        <span class="ms-2">
+                                            {% if scraper.daily_summary[0].uptime_percentage >= 99.9 %}
+                                            <span class="badge bg-success">OK (100% uptime)</span>
+                                            {% elif scraper.daily_summary[0].uptime_percentage >= 95 %}
+                                            <span class="badge bg-success">OK ({{ scraper.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
+                                            {% elif scraper.daily_summary[0].uptime_percentage >= 50 %}
+                                            <span class="badge bg-warning">Warning ({{ scraper.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
+                                            {% elif scraper.daily_summary %}
+                                            <span class="badge bg-danger">Critical ({{ scraper.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
                                             {% else %}
-                                                <span class="badge bg-secondary">Unknown</span>
+                                            <span class="badge bg-secondary">Unknown</span>
                                             {% endif %}
                                         </span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -434,16 +433,14 @@
                                                         
                                                         {% if specialized.daily_summary and specialized.daily_summary|length > 0 %}
                                                             <span class="ms-2">
-                                                                {% if specialized.daily_summary[0].uptime_percentage >= 95 %}
-                                                                    <span class="badge" style="background-color: #28a745">OK (95%+ uptime)</span>
-                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 75 %}
-                                                                    <span class="badge" style="background-color: #8bc34a">OK (75%+ uptime)</span>
+                                                                {% if specialized.daily_summary[0].uptime_percentage >= 99.9 %}
+                                                                    <span class="badge bg-success">OK (100% uptime)</span>
+                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 95 %}
+                                                                    <span class="badge bg-success">OK ({{ specialized.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
                                                                 {% elif specialized.daily_summary[0].uptime_percentage >= 50 %}
-                                                                    <span class="badge" style="background-color: #ffc107">Warning (50%+ uptime)</span>
-                                                                {% elif specialized.daily_summary[0].uptime_percentage >= 25 %}
-                                                                    <span class="badge" style="background-color: #ff9800">Warning (25%+ uptime)</span>
+                                                                    <span class="badge bg-warning">Warning ({{ specialized.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
                                                                 {% else %}
-                                                                    <span class="badge" style="background-color: #dc3545">Error (< 25% uptime)</span>
+                                                                    <span class="badge bg-danger">Critical ({{ specialized.daily_summary[0].uptime_percentage|round(1) }}% uptime)</span>
                                                                 {% endif %}
                                                             </span>
                                                         {% endif %}
@@ -487,48 +484,80 @@
                                                 <th>Time</th>
                                                 <th>Scraper</th>
                                                 <th>Status</th>
-                                                <th>Uptime</th>
-                                                <th>Checks</th>
-                                                <th>Last Error</th>
+                                                <th class="w-50">Last Error</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {% if scraper.specialized %}
                                                 {% for specialized in scraper.specialized %}
-                                                    {% for day in specialized.daily_summary[:2] %}
+                                                    {% if specialized.daily_summary and specialized.daily_summary[0].all_entries %}
+                                                        {% for entry in specialized.daily_summary[0].all_entries %}
+                                                        <tr>
+                                                            <td>{{ entry.date }}</td>
+                                                            <td>{{ entry.time }}</td>
+                                                            <td>{{ specialized.name }}</td>
+                                                            <td>
+                                                                {% if entry.status == 'ok' %}
+                                                                <span class="badge bg-success">OK</span>
+                                                                {% elif entry.status == 'error' %}
+                                                                <span class="badge bg-danger">Error</span>
+                                                                {% elif entry.status == 'running' %}
+                                                                <span class="badge bg-primary">Running</span>
+                                                                {% elif entry.status == 'warning' %}
+                                                                <span class="badge bg-warning">Warning</span>
+                                                                {% else %}
+                                                                <span class="badge bg-secondary">Unknown</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                {% if entry.error %}
+                                                                <span class="text-danger error-message" title="{{ entry.error }}">{{ entry.error }}</span>
+                                                                {% else %}
+                                                                <span class="text-muted">None</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <tr>
+                                                            <td colspan="5" class="text-center">No history available for {{ specialized.name }}</td>
+                                                        </tr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                {% if scraper.daily_summary and scraper.daily_summary[0].all_entries %}
+                                                    {% for entry in scraper.daily_summary[0].all_entries %}
                                                     <tr>
-                                                        <td>{{ day.date }}</td>
-                                                        <td>{{ day.last_timestamp|default('N/A') }}</td>
-                                                        <td>{{ specialized.name }}</td>
+                                                        <td>{{ entry.date }}</td>
+                                                        <td>{{ entry.time }}</td>
+                                                        <td>{{ scraper.name }}</td>
                                                         <td>
-                                                            {% if day.last_status == 'ok' %}
+                                                            {% if entry.status == 'ok' %}
                                                             <span class="badge bg-success">OK</span>
-                                                            {% elif day.last_status == 'error' %}
+                                                            {% elif entry.status == 'error' %}
                                                             <span class="badge bg-danger">Error</span>
-                                                            {% elif day.last_status == 'running' %}
+                                                            {% elif entry.status == 'running' %}
                                                             <span class="badge bg-primary">Running</span>
-                                                            {% elif day.last_status == 'warning' %}
+                                                            {% elif entry.status == 'warning' %}
                                                             <span class="badge bg-warning">Warning</span>
                                                             {% else %}
                                                             <span class="badge bg-secondary">Unknown</span>
                                                             {% endif %}
                                                         </td>
-                                                        <td>{{ day.uptime_percentage|round(1) }}%</td>
-                                                        <td>{{ day.total_count }}</td>
                                                         <td>
-                                                            {% if day.last_error %}
-                                                            <span class="text-danger error-message" title="{{ day.last_error }}">{{ day.last_error }}</span>
+                                                            {% if entry.error %}
+                                                            <span class="text-danger error-message" title="{{ entry.error }}">{{ entry.error }}</span>
                                                             {% else %}
                                                             <span class="text-muted">None</span>
                                                             {% endif %}
                                                         </td>
                                                     </tr>
                                                     {% endfor %}
-                                                {% endfor %}
-                                            {% else %}
+                                                {% else %}
                                                 <tr>
-                                                    <td colspan="7" class="text-center">No specialized scrapers available</td>
+                                                    <td colspan="5" class="text-center">No history available</td>
                                                 </tr>
+                                                {% endif %}
                                             {% endif %}
                                         </tbody>
                                     </table>
