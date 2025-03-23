@@ -21,7 +21,10 @@ markdown_extensions:
 plugins:
   - search
 
-copyright: Copyright &copy; 2025 Varun Hemachandran
+copyright: Copyright &copy; 2025 <a href="https://everythingisnoth.ing">Varun Hemachandran</a>
+
+extra:
+  generator: false  # Removes "Made with Material for MkDocs" text
 
 nav:
   - Home: index.md
