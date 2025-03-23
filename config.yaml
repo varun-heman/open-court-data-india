@@ -1,0 +1,46 @@
+# Global settings
+output_dir: "data"
+cache_dir: ".cache"
+log_level: "INFO"
+log_file: "scraper.log"
+log_to_console: true
+log_to_file: true
+
+# HTTP settings
+timeout: 30
+retries: 3
+retry_delay: 1
+max_retry_delay: 60
+backoff_factor: 2
+user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
+
+# Rate limiting
+rate_limit: 1  # requests per second
+rate_limit_enabled: true
+
+# Caching
+cache_enabled: true
+cache_expiry: 86400  # 24 hours
+
+# Scraper behavior
+follow_redirects: true
+verify_ssl: true
+download_pdf: true
+extract_text: true
+extract_metadata: true
+extract_structured_data: true
+
+# Courts specific settings
+courts:
+  delhi_hc:
+    base_url: "https://delhihighcourt.nic.in"
+    cause_list_url: "https://delhihighcourt.nic.in/reports/cause_list/current"
+    rate_limit: 0.5  # More conservative rate limit for Delhi HC
+    
+  supreme_court:
+    base_url: "https://main.sci.gov.in"
+    cause_list_url: "https://main.sci.gov.in/causelist"
+    
+  bombay_hc:
+    base_url: "https://bombayhighcourt.nic.in"
+    cause_list_url: "https://bombayhighcourt.nic.in/causelist"
