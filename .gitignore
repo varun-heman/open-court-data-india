@@ -48,6 +48,9 @@ data
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Healthcheck logs
+healthcheck/
+
 # OS specific
 .DS_Store
 .DS_Store?
