@@ -20,12 +20,10 @@ from .common import (
 # Import PDF utilities
 from .pdf_utils import (
     extract_text_from_pdf,
-    extract_text_from_pdf_bytes,
     extract_date_from_pdf,
     extract_court_info_from_pdf,
-    extract_case_details_from_pdf,
-    is_cause_list_pdf,
-    extract_structured_data_from_pdf
+    extract_cases_from_pdf,
+    parse_pdf_for_structured_data
 )
 
 # Import HTML utilities
@@ -46,7 +44,8 @@ from .scraper_utils import (
     RateLimitExceededError,
     DownloadError,
     ParsingError,
-    ContentTypeError
+    ContentTypeError,
+    get_content_type
 )
 
 # Import configuration utilities
@@ -80,12 +79,10 @@ __all__ = [
     
     # PDF utilities
     'extract_text_from_pdf',
-    'extract_text_from_pdf_bytes',
     'extract_date_from_pdf',
     'extract_court_info_from_pdf',
-    'extract_case_details_from_pdf',
-    'is_cause_list_pdf',
-    'extract_structured_data_from_pdf',
+    'extract_cases_from_pdf',
+    'parse_pdf_for_structured_data',
     
     # HTML utilities
     'extract_text_from_html',
@@ -103,6 +100,7 @@ __all__ = [
     'DownloadError',
     'ParsingError',
     'ContentTypeError',
+    'get_content_type',
     
     # Configuration utilities
     'ScraperConfig',

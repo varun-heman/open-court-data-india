@@ -15,12 +15,11 @@ from utils import (
     extract_links_from_html,
     extract_date_from_html,
     extract_pdf_links_from_html,
-    is_cause_list_pdf,
-    extract_structured_data_from_pdf,
     extract_date_from_pdf,
     clean_filename,
     build_full_url,
-    get_content_type
+    get_content_type,
+    parse_pdf_for_structured_data
 )
 
 
@@ -181,8 +180,14 @@ class DelhiHCScraper(BaseScraper):
         # Look for links in the page
         for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
-            full_url = build_full_url(self.base_url, href)
             title = a_tag.get_text(strip=True) or os.path.basename(href)
+            
+            # Skip JavaScript links
+            if href.startswith('javascript:') or href.startswith('javaScript:'):
+                self.logger.debug(f"Skipping JavaScript link: {href}")
+                continue
+                
+            full_url = build_full_url(self.base_url, href)
             
             # Skip if we've already processed this URL
             if full_url in self.processed_urls:
@@ -190,7 +195,11 @@ class DelhiHCScraper(BaseScraper):
                 continue
             
             # Check content type for better filtering
-            content_type = get_content_type(full_url, self.session)
+            try:
+                content_type = get_content_type(full_url, self.session)
+            except Exception as e:
+                self.logger.debug(f"Error checking content type for {full_url}: {e}")
+                content_type = None
             
             is_cause_list, confidence, reason = self.is_likely_cause_list(full_url, title, content_type)
             
@@ -272,9 +281,7 @@ class DelhiHCScraper(BaseScraper):
                 return None
             
             # Check if it's a cause list PDF
-            if not is_cause_list_pdf(pdf_path):
-                self.logger.info(f"Not a cause list PDF: {pdf_path}")
-                return pdf_path
+            # Removed is_cause_list_pdf check as it is not available in the utils package
             
             # Extract date from PDF
             pdf_date = extract_date_from_pdf(pdf_path)
@@ -318,7 +325,7 @@ class DelhiHCScraper(BaseScraper):
             # Extract structured data if configured
             if self.config.get("extract_structured_data", True):
                 try:
-                    structured_data = extract_structured_data_from_pdf(pdf_path)
+                    structured_data = parse_pdf_for_structured_data(pdf_path)
                     if structured_data:
                         # Save structured data
                         json_path = os.path.splitext(pdf_path)[0] + ".json"

@@ -19,7 +19,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 from .config import ScraperConfig
 from .logger import setup_logger, get_logger_with_context
-from .cache import ScraperCache, cached
+from .cache import ScraperCache
 from .common import ensure_directory, clean_filename, get_today_formatted, build_full_url, get_file_hash
 
 
@@ -93,6 +93,7 @@ class BaseScraper:
         log_to_file = self.config.get("log_to_file", True)
         
         setup_logger(
+            name=f"{court_name.lower().replace(' ', '_')}_logger",
             level=log_level,
             log_file=log_file,
             log_to_console=log_to_console,
@@ -190,7 +191,6 @@ class BaseScraper:
         
         self.last_request_time = time.time()
     
-    @cached(key_prefix="fetch_page")
     def fetch_page(self, url: str) -> Optional[BeautifulSoup]:
         """
         Fetch a webpage and return its BeautifulSoup object.
@@ -205,6 +205,14 @@ class BaseScraper:
             RequestError: If the request fails
         """
         self.logger.info(f"Fetching page: {url}")
+        
+        # Check if result is in cache
+        if self.cache:
+            cache_key = f"fetch_page:{url}"
+            cached_result = self.cache.get(cache_key)
+            if cached_result:
+                self.logger.debug(f"Using cached result for {url}")
+                return cached_result
         
         try:
             # Respect rate limiting
@@ -230,6 +238,12 @@ class BaseScraper:
             # Parse HTML
             soup = BeautifulSoup(response.text, "html.parser")
             self.logger.debug(f"Successfully fetched page: {url}")
+            
+            # Cache result
+            if self.cache:
+                cache_key = f"fetch_page:{url}"
+                self.cache.set(cache_key, soup)
+            
             return soup
         
         except requests.exceptions.RequestException as e:
