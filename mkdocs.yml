@@ -5,6 +5,9 @@ site_url: https://varun-heman.github.io/open-court-data-india/
 repo_url: https://github.com/varun-heman/open-court-data-india
 repo_name: varun-heman/open-court-data-india
 
+# GitHub Pages deployment configuration
+use_directory_urls: true
+
 theme:
   name: material
   palette:
@@ -74,9 +77,6 @@ plugins:
             show_source: true
             show_root_heading: true
             heading_level: 3
-
-# GitHub Pages deployment configuration
-use_directory_urls: true
 
 nav:
   - Home: index.md
