@@ -59,3 +59,31 @@ healthcheck/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.postgresql
+*.dump
+
+# API documentation
+/docs/api/
+
+# Test data
+/test_data/
+
+# Generated files
+/generated/
+*.generated.*
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+tmp/

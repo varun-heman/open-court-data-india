@@ -30,6 +30,9 @@ open-court-data-india/
 ├── data/                  # Directory for downloaded data (not tracked by Git)
 │   └── delhi_hc/          # Delhi High Court data
 │       └── cause_lists/   # Delhi HC cause lists
+├── db/                    # Database-related files
+│   ├── connector.py       # Database connector class
+│   └── schema.sql         # PostgreSQL database schema
 ├── scrapers/              # Individual court scrapers
 │   ├── delhi_hc/          # Delhi High Court scraper
 │   │   └── cause_lists/   # Delhi HC cause list scraper
@@ -44,11 +47,16 @@ open-court-data-india/
 │   ├── config.py          # Configuration utilities
 │   ├── logger.py          # Logging utilities
 │   ├── cache.py           # Caching utilities
+│   ├── data_processor.py  # Data processing utilities
 │   └── gemini_utils.py    # Google Gemini API utilities
 ├── examples/              # Example scripts
 ├── tests/                 # Unit tests
 ├── config.yaml            # Configuration file
 ├── requirements.txt       # Python dependencies
+├── run_pipeline.py        # Complete data pipeline script
+├── query_db.py            # Database query script
+├── tag_cases.py           # Case tagging script
+├── .env                   # Environment variables (not tracked by Git)
 └── README.md              # This file
 ```
 
@@ -58,6 +66,9 @@ open-court-data-india/
 - **Metadata Extraction**: Automatically extracts metadata from court documents
 - **PDF Processing**: Downloads and processes PDF documents from court websites
 - **Structured Data Extraction**: Converts unstructured court data into structured formats using Google's Gemini API
+- **PostgreSQL Database Integration**: Stores structured court data in a PostgreSQL database for efficient querying and analysis
+- **Case Tagging System**: Automatically categorizes cases based on patterns in case numbers and titles
+- **Complete Data Pipeline**: End-to-end workflow from scraping to processing, storage, and analysis
 - **Configurable Behavior**: Customize scraper behavior through configuration files
 - **Parallel Processing**: Efficiently downloads and processes multiple documents concurrently
   - Configurable number of worker threads for downloads and API processing
@@ -245,6 +256,167 @@ processing_workers: 3
 # API configuration
 gemini_api_key: "your-api-key"
 ```
+
+## Database Integration
+
+The project now includes PostgreSQL database integration for storing structured court data, with a complete data pipeline:
+
+1. Automated data structuring with Gemini API
+2. PostgreSQL database storage
+3. Query tools for data retrieval and analysis
+4. Case tagging functionality
+
+### System Architecture
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│ Delhi HC    │    │ Gemini API  │    │ PostgreSQL  │    │ Frontend UI │
+│ Scraper     │───>│ Processing  │───>│ Database    │<───│ (React)     │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                           ▲
+                                           │
+                                      ┌────┴────┐
+                                      │ FastAPI │
+                                      │ Backend │
+                                      └─────────┘
+```
+
+### Database Setup
+
+1. Install PostgreSQL if not already installed:
+
+```bash
+# macOS (using Homebrew)
+brew install postgresql
+brew services start postgresql
+
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+2. Create database and user:
+
+```bash
+# Connect to PostgreSQL
+psql postgres
+
+# Create user and database
+CREATE USER ecourts WITH PASSWORD 'your_password';
+CREATE DATABASE ecourts OWNER ecourts;
+\q
+```
+
+3. Initialize the database schema:
+
+```bash
+# Set environment variables
+export DB_USER=ecourts
+export DB_PASSWORD=your_password
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=ecourts
+
+# Initialize database schema
+psql -U ecourts -d ecourts -f db/schema.sql
+```
+
+### Running the Complete Pipeline
+
+The `run_pipeline.py` script runs the entire workflow in a single command:
+
+```bash
+# Run the complete pipeline for today
+python run_pipeline.py
+
+# Run the pipeline for a specific date
+python run_pipeline.py --date 2025-03-23
+
+# Run the pipeline for multiple days
+python run_pipeline.py --days 7
+
+# Skip specific steps
+python run_pipeline.py --no-scrape  # Skip scraping, only process and tag
+python run_pipeline.py --no-process  # Skip processing, only scrape and tag
+python run_pipeline.py --no-tag  # Skip tagging, only scrape and process
+
+# Enable parallel processing
+python run_pipeline.py --parallel --download-workers 5 --processing-workers 3
+
+# Enable debug logging
+python run_pipeline.py --debug
+```
+
+The pipeline handles:
+1. Scraping Delhi HC cause lists (with optional date filtering)
+2. Processing PDFs with Gemini API
+3. Storing structured data in PostgreSQL
+4. Automatically tagging cases based on patterns
+
+### Querying the Database
+
+The `query_db.py` script provides a command-line interface for querying the database:
+
+```bash
+# List all available dates
+python query_db.py --list-dates
+
+# Query by date
+python query_db.py --date 2025-03-23 --pretty
+
+# Filter by bench number
+python query_db.py --date 2025-03-23 --bench "COURT NO. 01" --pretty
+
+# Search for a specific case
+python query_db.py --case "W.P.(C)-6483/2021" --pretty
+
+# Filter by tags
+python query_db.py --tag "education" --pretty
+
+# Output as JSON
+python query_db.py --date 2025-03-23 --json
+```
+
+### Case Tagging
+
+The `tag_cases.py` script allows you to add tags to cases in the database:
+
+```bash
+# List all tags in the database
+python tag_cases.py --list-tags
+
+# Manually tag a specific case
+python tag_cases.py --case-id "case_uuid" --add-tags "important,urgent"
+
+# Auto-tag all cases based on patterns
+python tag_cases.py --auto-tag
+
+# Remove tags from a case
+python tag_cases.py --case-id "case_uuid" --remove-tags "urgent"
+```
+
+Auto-tagging rules include:
+- Case numbers with "W.P." are tagged as "writ_petition"
+- Case numbers with "CRL.M.C." are tagged as "criminal"
+- Case numbers with "CS(COMM)" are tagged as "commercial"
+- Titles containing "education" are tagged as "education"
+- And many more predefined patterns
+
+### Environment Variables
+
+The database connection requires the following environment variables:
+
+```
+DB_USER=ecourts
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ecourts
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+You can set these in a `.env` file in the project root or export them directly in your shell.
 
 ## Utilities
 

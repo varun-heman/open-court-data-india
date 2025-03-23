@@ -6,6 +6,7 @@ import base64
 import logging
 from typing import Optional, Dict, Any
 import google.generativeai as genai
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,9 @@ def setup_gemini_api():
     """
     Set up the Gemini API with the API key from environment variables
     """
+    # Load environment variables from .env file
+    load_dotenv()
+    
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         logger.error("GEMINI_API_KEY environment variable not set")

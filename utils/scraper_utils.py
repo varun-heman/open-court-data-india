@@ -520,39 +520,36 @@ class BaseScraper:
         """
         try:
             # Dynamically import healthcheck to avoid circular imports
-            from healthcheck import update_scraper_status, get_scrapers
-            
-            # Get the scraper info
-            scrapers = get_scrapers()
-            scraper_info = None
+            from healthcheck import update_scraper_status
             
             # Get the current module and class name to identify the scraper
             module_name = self.__class__.__module__
             class_name = self.__class__.__name__
             
-            # Find the matching scraper info
-            for scraper in scrapers:
-                # Check if this is the base scraper
-                if scraper["type"] == "base" and module_name.endswith(os.path.basename(scraper["file"])[:-3]):
-                    scraper_info = scraper
-                    break
-                
-                # Check specialized scrapers
-                if "specialized" in scraper:
-                    for specialized in scraper["specialized"]:
-                        if specialized["type"] != "base" and module_name.endswith(os.path.basename(specialized["file"])[:-3]):
-                            scraper_info = specialized
-                            break
-                    
-                    if scraper_info:
-                        break
+            # Determine scraper ID based on class name
+            scraper_id = None
+            if "DelhiHCCauseListScraper" in class_name:
+                scraper_id = "delhi_hc_cause_lists"
+            elif "DelhiHCScraper" in class_name:
+                scraper_id = "delhi_hc"
             
-            # Update the status if we found the scraper info
-            if scraper_info:
+            # If we couldn't determine the scraper ID from the class name,
+            # try to determine it from the module path
+            if not scraper_id:
+                if "delhi_hc" in module_name:
+                    if "cause_lists" in module_name:
+                        scraper_id = "delhi_hc_cause_lists"
+                    else:
+                        scraper_id = "delhi_hc"
+            
+            # Update the status if we found the scraper ID
+            if scraper_id:
+                # Create a simple scraper info dict
+                scraper_info = {"id": scraper_id}
                 update_scraper_status(scraper_info, status, error)
-                self.logger.info(f"Updated healthcheck status to {status}")
+                self.logger.info(f"Updated healthcheck status to {status} for {scraper_id}")
             else:
-                self.logger.warning(f"Could not find scraper info for {module_name}.{class_name}")
+                self.logger.warning(f"Could not determine scraper ID for {module_name}.{class_name}")
         except Exception as e:
             self.logger.error(f"Error updating healthcheck status: {e}")
     

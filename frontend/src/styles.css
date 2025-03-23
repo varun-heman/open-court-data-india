@@ -1,0 +1,75 @@
+/* Custom styles for the court data UI */
+
+/* Court card styles */
+.court-card {
+  @apply bg-white rounded-lg shadow overflow-hidden mb-4;
+}
+
+.court-card-header {
+  @apply flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50;
+}
+
+/* Case item styles */
+.case-item {
+  @apply p-4 border-t border-gray-200;
+}
+
+.case-item:hover {
+  @apply bg-gray-50;
+}
+
+/* Day tab styles */
+.day-tab {
+  @apply px-3 py-1.5 text-sm font-medium text-gray-700;
+}
+
+.day-tab.active {
+  @apply bg-white rounded-md shadow text-court-blue;
+}
+
+/* Sidebar styles */
+.sidebar-menu-item {
+  @apply flex items-center px-3 py-2 text-sm font-medium rounded-md;
+}
+
+.sidebar-menu-item.active {
+  @apply bg-court-blue text-white;
+}
+
+.sidebar-menu-item:not(.active) {
+  @apply text-gray-600 hover:bg-gray-100;
+}
+
+.sidebar-submenu-item {
+  @apply pl-10 pr-3 py-2 text-sm font-medium rounded-md;
+}
+
+.sidebar-submenu-item.active {
+  @apply bg-blue-100 text-court-blue;
+}
+
+.sidebar-submenu-item:not(.active) {
+  @apply text-gray-600 hover:bg-gray-100;
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .court-card-header {
+    @apply flex-col items-start space-y-2;
+  }
+  
+  .court-card-header button {
+    @apply self-end;
+  }
+}

@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import custom styles */
+@import './styles.css';
+
+/* Base styles */
+body {
+  @apply bg-gray-100 text-gray-900 font-sans;
+}
+
+/* Custom color classes */
+.text-court-blue {
+  color: #3b82f6;
+}
+
+.bg-court-blue {
+  background-color: #3b82f6;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+@layer components {
+  .sidebar-item {
+    @apply flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-100 hover:text-court-blue transition-colors;
+  }
+  
+  .sidebar-item.active {
+    @apply bg-blue-50 text-court-blue;
+  }
+  
+  .sidebar-submenu {
+    @apply ml-6 space-y-1 mt-1;
+  }
+  
+  .day-tab {
+    @apply flex-1 py-2 px-4 text-center text-sm font-medium border-b-2 focus:outline-none transition-colors;
+  }
+  
+  .day-tab.active {
+    @apply border-court-blue text-court-blue;
+  }
+  
+  .day-tab:not(.active) {
+    @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+  }
+  
+  .court-card {
+    @apply bg-white shadow rounded-lg mb-4 overflow-hidden;
+  }
+  
+  .court-card-header {
+    @apply flex justify-between items-center p-4 bg-gray-50 border-b cursor-pointer;
+  }
+  
+  .case-item {
+    @apply border-b border-gray-200 p-4 hover:bg-gray-50;
+  }
+}
