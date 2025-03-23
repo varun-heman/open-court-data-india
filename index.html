@@ -426,11 +426,53 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
-      Features
+      Key Features
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#centralized-utilities-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Centralized Utilities Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consistent-directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consistent Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parallel-processing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel Processing Capabilities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -438,6 +480,15 @@
   <a href="#implementation-status" class="md-nav__link">
     <span class="md-ellipsis">
       Implementation Status
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
     </span>
   </a>
   
@@ -1173,11 +1224,53 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
-      Features
+      Key Features
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#centralized-utilities-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Centralized Utilities Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consistent-directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consistent Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parallel-processing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel Processing Capabilities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1185,6 +1278,15 @@
   <a href="#implementation-status" class="md-nav__link">
     <span class="md-ellipsis">
       Implementation Status
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
     </span>
   </a>
   
@@ -1231,18 +1333,35 @@
 <p>A collection of scrapers and tools for accessing Indian court data.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>The Open Court Data India project provides tools for scraping, processing, and analyzing data from various Indian courts. The project aims to make court data more accessible and usable for researchers, legal professionals, and the general public.</p>
-<p><img alt="Project Structure" src="assets/images/project-structure.png" /></p>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<h3 id="centralized-utilities-structure">Centralized Utilities Structure<a class="headerlink" href="#centralized-utilities-structure" title="Permanent link">&para;</a></h3>
+<p>The project has been refactored to use a centralized utilities structure:</p>
 <ul>
-<li><strong>Standardized Data Structure</strong>: All scraped data follows a consistent format for easy integration</li>
-<li><strong>Metadata Extraction</strong>: Automatically extracts metadata from court documents</li>
-<li><strong>PDF Processing</strong>: Downloads and processes PDF documents from court websites</li>
-<li><strong>Structured Data Extraction</strong>: Converts unstructured court data into structured formats using Google's Gemini API</li>
-<li><strong>PostgreSQL Database Integration</strong>: Stores structured court data in a PostgreSQL database for efficient querying and analysis</li>
-<li><strong>Case Tagging System</strong>: Automatically categorizes cases based on patterns in case numbers and titles</li>
-<li><strong>Complete Data Pipeline</strong>: End-to-end workflow from scraping to processing, storage, and analysis</li>
-<li><strong>Parallel Processing</strong>: Efficiently downloads and processes multiple documents concurrently</li>
-<li><strong>API and Frontend</strong>: Access court data through a REST API and web interface</li>
+<li><code>common.py</code>: General utility functions (directory management, filename cleaning, date extraction)</li>
+<li><code>pdf_utils.py</code>: PDF handling functions (text extraction, structured data parsing)</li>
+<li><code>html_utils.py</code>: HTML processing functions (text extraction, navigation page detection)</li>
+<li><code>scraper_utils.py</code>: Scraper-specific utilities (downloading, content type checking, metadata saving)</li>
+</ul>
+<h3 id="consistent-directory-structure">Consistent Directory Structure<a class="headerlink" href="#consistent-directory-structure" title="Permanent link">&para;</a></h3>
+<p>The Delhi High Court scrapers follow a consistent directory structure for saving data:</p>
+<ul>
+<li>Base path: <code>/Users/varunh/Documents/ecourts-scrapers/data/</code></li>
+<li>Delhi HC base scraper: <code>/Users/varunh/Documents/ecourts-scrapers/data/delhi_hc/</code></li>
+<li>Delhi HC cause list scraper: <code>/Users/varunh/Documents/ecourts-scrapers/data/delhi_hc/cause_lists/</code></li>
+</ul>
+<h3 id="parallel-processing-capabilities">Parallel Processing Capabilities<a class="headerlink" href="#parallel-processing-capabilities" title="Permanent link">&para;</a></h3>
+<p>The Delhi HC scraper has been enhanced with parallel processing capabilities:</p>
+<ul>
+<li><strong>Parallel PDF Downloading</strong>: Using ThreadPoolExecutor with configurable workers</li>
+<li><strong>Parallel Gemini API Processing</strong>: For enhanced metadata extraction</li>
+<li><strong>Configurable Options</strong>: Control parallelism and resource usage</li>
+</ul>
+<h3 id="database-integration">Database Integration<a class="headerlink" href="#database-integration" title="Permanent link">&para;</a></h3>
+<p>The project includes PostgreSQL database integration for storing and querying court data:</p>
+<ul>
+<li>Structured schema for courts, benches, judges, cause lists, and cases</li>
+<li>API for programmatic access to the database</li>
+<li>Tagging system for categorizing and filtering cases</li>
 </ul>
 <h2 id="implementation-status">Implementation Status<a class="headerlink" href="#implementation-status" title="Permanent link">&para;</a></h2>
 <p>The following table shows the implementation status of scrapers for various Indian courts:</p>
@@ -1316,6 +1435,8 @@
 </tbody>
 </table>
 <p>✅ - Implemented | ❌ - Not yet implemented</p>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>Check out the <a href="getting-started/installation/">Installation Guide</a> to get started with the project.</p>
 <h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="getting-started/installation/">Installation Guide</a></li>
